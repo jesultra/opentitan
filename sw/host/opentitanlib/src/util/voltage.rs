@@ -4,8 +4,9 @@
 
 use std::num::ParseFloatError;
 use std::str::FromStr;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct Voltage(pub f64);
 
 impl FromStr for Voltage {

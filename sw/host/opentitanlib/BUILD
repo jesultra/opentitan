@@ -16,6 +16,7 @@ rust_library(
         "src/backend/cw310.rs",
         "src/backend/hyperdebug.rs",
         "src/backend/mod.rs",
+        "src/backend/proxy.rs"
         "src/backend/ultradebug.rs",
         "src/backend/verilator.rs",
         "src/bootstrap/legacy.rs",
@@ -40,6 +41,8 @@ rust_library(
         "src/spiflash/flash.rs",
         "src/spiflash/mod.rs",
         "src/spiflash/sfdp.rs",
+        "src/proxy/mod.rs",
+        "src/proxy/protocole.rs",
         "src/transport/cw310/gpio.rs",
         "src/transport/cw310/mod.rs",
         "src/transport/cw310/spi.rs",

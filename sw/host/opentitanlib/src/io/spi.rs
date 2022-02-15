@@ -8,6 +8,8 @@ use std::str::FromStr;
 use structopt::StructOpt;
 use thiserror::Error;
 
+use serde::{Deserialize, Serialize};
+
 use crate::app::TransportWrapper;
 use crate::util::voltage::Voltage;
 
@@ -43,7 +45,7 @@ impl SpiParams {
 }
 
 /// Errors related to the SPI interface and SPI transactions.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize, Deserialize)]
 pub enum SpiError {
     #[error("Invalid option: {0}")]
     InvalidOption(String),
@@ -62,7 +64,7 @@ pub enum SpiError {
 /// Represents the SPI transfer mode.
 /// See https://en.wikipedia.org/wiki/Serial_Peripheral_Interface#Clock_polarity_and_phase
 /// for details about SPI transfer modes.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum TransferMode {
     /// `Mode0` is CPOL=0, CPHA=0.
     Mode0,
@@ -87,13 +89,13 @@ impl FromStr for TransferMode {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ClockPhase {
     SampleLeading,
     SampleTrailing,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ClockPolarity {
     IdleLow,
     IdleHigh,

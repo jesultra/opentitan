@@ -7,6 +7,7 @@ use thiserror::Error;
 use std::rc::Rc;
 use structopt::StructOpt;
 
+use serde::{Deserialize, Serialize};
 use crate::app::TransportWrapper;
 
 #[derive(Debug, StructOpt)]
@@ -23,7 +24,7 @@ impl I2cParams {
 }
 
 /// Errors related to the I2C interface and I2C transactions.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize, Deserialize)]
 pub enum I2cError {
     #[error("Invalid data length: {0}")]
     InvalidDataLength(usize),

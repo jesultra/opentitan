@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use structopt::clap::arg_enum;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Serialize, Deserialize)]
 pub enum GpioError {
     #[error("Invalid GPIO pin name {0}")]
     InvalidPinName(String),
@@ -24,7 +24,7 @@ pub enum GpioError {
 
 arg_enum! {
     /// Mode of I/O pins.
-    #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+    #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
     pub enum PinMode {
         Input,
         PushPull,
@@ -34,7 +34,7 @@ arg_enum! {
 
 arg_enum! {
     /// Mode of weak pull (relevant in Input and OpenDrain modes).
-    #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub enum PullMode {
         None,
         PullUp,
@@ -55,4 +55,5 @@ pub trait GpioPin {
 
     /// Sets the weak pull resistors of the GPIO pin.
     fn set_pull_mode(&self, mode: PullMode) -> Result<()>;
+
 }
