@@ -6,7 +6,9 @@ use anyhow::{anyhow, bail, Result};
 use directories::{BaseDirs, ProjectDirs};
 use erased_serde::Serialize;
 use log::LevelFilter;
-use nix::sys::signal::{self, Signal};
+use mio::{Interest, Registry, Token};
+use mio_signals::{Signal, Signals};
+use nix::sys::signal;
 use nix::unistd::{dup2, setsid, Pid};
 use std::env::{self, args_os, ArgsOs};
 use std::ffi::OsString;
@@ -21,7 +23,7 @@ use std::time::Duration;
 use structopt::StructOpt;
 
 use opentitanlib::backend;
-use opentitanlib::proxy::SessionHandler;
+use opentitanlib::proxy::{SessionHandler, SignalSource};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -156,8 +158,9 @@ fn start_session(run_file_fn: impl FnOnce(u16) -> PathBuf) -> Result<Box<dyn Ser
 // `SessionStartResult` sent through the stdout anonymous pipe, and finally enter an infnite
 // loop, processing connections on that socket
 fn session_child(listen_port: Option<u16>, backend_opts: &backend::BackendOpts) -> Result<()> {
+    let signals = UnixSignalSource::new()?;
     let transport = backend::create(backend_opts)?;
-    let mut session = SessionHandler::init(&transport, listen_port)?;
+    let mut session = SessionHandler::init(&transport, listen_port, signals)?;
     // Instantiation of Transport backend, and binding to a socket was successful, now go
     // through the process of making this process a daemon, disconnected from the
     // terminal that was used to start it.
@@ -197,6 +200,44 @@ fn session_child(listen_port: Option<u16>, backend_opts: &backend::BackendOpts) 
     session.run_loop()
 }
 
+struct UnixSignalSource {
+    signals: Signals,
+}
+
+impl UnixSignalSource {
+    fn new() -> Result<Self> {
+        Ok(Self {
+            signals: Signals::new(Signal::Terminate | Signal::Interrupt)?,
+        })
+    }
+}
+
+impl SignalSource for UnixSignalSource {
+    fn register(&mut self, registry: &Registry, token: Token) -> Result<()> {
+        registry.register(&mut self.signals, token, Interest::READABLE)?;
+        Ok(())
+    }
+    fn should_terminate(&mut self) -> Result<bool> {
+        let mut exit_requested = false;
+        loop {
+            match self.signals.receive()? {
+                Some(Signal::Interrupt) => {
+                    log::info!("Got interrupt signal");
+                    exit_requested = true;
+                }
+                Some(Signal::Terminate) => {
+                    log::info!("Got terminate signal");
+                    exit_requested = true;
+                }
+                Some(signal) => {
+                    log::info!("Got unexpected signal: {:?}", signal);
+                }
+                None => return Ok(exit_requested),
+            }
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct SessionStopResult {}
 
@@ -207,7 +248,7 @@ fn stop_session(run_file_fn: impl FnOnce(u16) -> PathBuf, port: u16) -> Result<B
     let path = run_file_fn(port);
     let pid: i32 = FromStr::from_str(&fs::read_to_string(&path)?.trim())?;
     // Send signal to daemon process, asking it to terminate.
-    signal::kill(Pid::from_raw(pid), Signal::SIGTERM)?;
+    signal::kill(Pid::from_raw(pid), signal::Signal::SIGTERM)?;
     // Wait for daemon process to stop.
     loop {
         std::thread::sleep(Duration::from_millis(100));
@@ -230,8 +271,9 @@ fn main() -> Result<()> {
 
     if opts.debug {
         // Start session process in foreground (do not daemonize)
+        let signals = UnixSignalSource::new()?;
         let transport = backend::create(&opts.backend_opts)?;
-        let mut session = SessionHandler::init(&transport, opts.listen_port)?;
+        let mut session = SessionHandler::init(&transport, opts.listen_port, signals)?;
         println!("Listening on port {}", session.get_port());
         session.run_loop()?;
         return Ok(());

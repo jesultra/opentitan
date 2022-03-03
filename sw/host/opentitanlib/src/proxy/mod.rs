@@ -15,6 +15,7 @@ pub mod errors;
 mod handler;
 pub mod protocol;
 mod socket_server;
+pub use socket_server::SignalSource;
 
 /// Interface for handlers of protocol messages, responding to each message with a single
 /// instance of the same protocol message.
@@ -24,13 +25,17 @@ pub trait CommandHandler<Msg> {
 
 /// This is the main entry point for the session proxy.  This struct will either bind on a
 /// specified port, or find an available port from a range, before entering an event loop.
-pub struct SessionHandler<'a> {
+pub struct SessionHandler<'a, S: SignalSource> {
     port: u16,
-    socket_server: JsonSocketServer<Message, TransportCommandHandler<'a>>,
+    socket_server: JsonSocketServer<Message, TransportCommandHandler<'a>, S>,
 }
 
-impl<'a> SessionHandler<'a> {
-    pub fn init(transport: &'a TransportWrapper, listen_port: Option<u16>) -> Result<Self> {
+impl<'a, S: SignalSource> SessionHandler<'a, S> {
+    pub fn init(
+        transport: &'a TransportWrapper,
+        listen_port: Option<u16>,
+        signals: S,
+    ) -> Result<Self> {
         let mut port = listen_port.unwrap_or(9900);
         let limit = listen_port.unwrap_or(9999);
         // Find a suitable port to bind to.
@@ -43,7 +48,7 @@ impl<'a> SessionHandler<'a> {
             }
         };
         let socket_server =
-            JsonSocketServer::new(TransportCommandHandler::new(&transport), socket)?;
+            JsonSocketServer::new(TransportCommandHandler::new(&transport), socket, signals)?;
         // Configure all GPIO pins to default direction and level, according to
         // configuration files provided.
         transport.apply_default_pin_configurations()?;

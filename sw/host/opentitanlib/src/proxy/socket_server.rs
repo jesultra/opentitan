@@ -6,8 +6,7 @@ use anyhow::{bail, Result};
 use mio::event::Event;
 use mio::net::TcpListener;
 use mio::net::TcpStream;
-use mio::{Events, Interest, Poll, Token};
-use mio_signals::{Signal, SignalSet, Signals};
+use mio::{Events, Interest, Poll, Registry, Token};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
@@ -21,6 +20,18 @@ use super::CommandHandler;
 const BUFFER_SIZE: usize = 8192;
 const EOL_CODE: u8 = b'\n';
 
+/// Some means of signalling the need for the server to terminate, in a way that can be
+/// registered with a `mio::Poll`.
+pub trait SignalSource {
+    /// This method will be called once, and should register its underlying trigger with the
+    /// given `Registry`, using the given `Token`.
+    fn register(&mut self, registry: &Registry, token: Token) -> Result<()>;
+
+    /// This method will be called any time the token registered above becomes "ready", and
+    /// returning true will cause the server loop to terminate gracefully.
+    fn should_terminate(&mut self) -> Result<bool>;
+}
+
 fn get_next_token() -> Token {
     static TOCKEN_COUNTER: AtomicUsize = AtomicUsize::new(0);
     Token(TOCKEN_COUNTER.fetch_add(1, Ordering::Relaxed))
@@ -30,31 +41,32 @@ fn get_next_token() -> Token {
 /// receiving serialized JSON representations of `Msg`, passing them to the given
 /// `CommandHandler` to obtain responses to be sent as socket flow contol permits.  Note that
 /// this implementaion is not specific to (and does not refer to) any particular protocol.
-pub struct JsonSocketServer<Msg: DeserializeOwned + Serialize, T: CommandHandler<Msg>> {
+pub struct JsonSocketServer<
+    Msg: DeserializeOwned + Serialize,
+    T: CommandHandler<Msg>,
+    S: SignalSource,
+> {
     command_handler: T,
     poll: Poll,
     socket: TcpListener,
     socket_token: Token,
-    signals: Signals,
+    signals: S,
     signal_token: Token,
     connection_map: HashMap<Token, Connection>,
     exit_requested: bool,
     phantom: PhantomData<Msg>,
 }
 
-impl<Msg: DeserializeOwned + Serialize, T: CommandHandler<Msg>> JsonSocketServer<Msg, T> {
-    pub fn new(command_handler: T, mut socket: TcpListener) -> Result<Self> {
+impl<Msg: DeserializeOwned + Serialize, T: CommandHandler<Msg>, S: SignalSource>
+    JsonSocketServer<Msg, T, S>
+{
+    pub fn new(command_handler: T, mut socket: TcpListener, mut signals: S) -> Result<Self> {
         let poll = Poll::new()?;
         let socket_token = get_next_token();
         poll.registry()
             .register(&mut socket, socket_token, Interest::READABLE)?;
-        // Create a `Signals` instance that will catch given set of signals for us.
-        let signals: SignalSet = Signal::Terminate | Signal::Interrupt;
-        let mut signals = Signals::new(signals)?;
-        // And register it with our `Poll` instance.
         let signal_token = get_next_token();
-        poll.registry()
-            .register(&mut signals, signal_token, Interest::READABLE)?;
+        signals.register(poll.registry(), signal_token)?;
         Ok(Self {
             command_handler,
             poll,
@@ -82,7 +94,9 @@ impl<Msg: DeserializeOwned + Serialize, T: CommandHandler<Msg>> JsonSocketServer
                 if event.token() == self.socket_token {
                     self.process_new_connection()?;
                 } else if event.token() == self.signal_token {
-                    self.process_signals()?;
+                    if self.signals.should_terminate()? {
+                        self.exit_requested = true;
+                    }
                 } else {
                     match self.process_connection(event) {
                         Ok(shutdown) => {
@@ -127,25 +141,6 @@ impl<Msg: DeserializeOwned + Serialize, T: CommandHandler<Msg>> JsonSocketServer
                     return Ok(());
                 }
                 Err(err) => bail!("Error accepting TCP connection: {}", err),
-            }
-        }
-    }
-
-    fn process_signals(&mut self) -> Result<()> {
-        loop {
-            match self.signals.receive()? {
-                Some(Signal::Interrupt) => {
-                    log::info!("Got interrupt signal");
-                    self.exit_requested = true;
-                }
-                Some(Signal::Terminate) => {
-                    log::info!("Got terminate signal");
-                    self.exit_requested = true;
-                }
-                Some(signal) => {
-                    log::info!("Got unexpected signal: {:?}", signal);
-                }
-                None => return Ok(()),
             }
         }
     }
