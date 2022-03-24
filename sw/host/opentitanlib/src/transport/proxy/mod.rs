@@ -16,7 +16,7 @@ use crate::io::gpio::GpioPin;
 use crate::io::i2c::Bus;
 use crate::io::spi::Target;
 use crate::io::uart::Uart;
-use crate::proxy::protocol::{Message, ProxyRequest, ProxyResponse, Request, Response};
+use crate::proxy::protocol::{Message, GetCapabilitiesReq, ProxyRequest, ProxyResponse, Request, Response};
 use crate::transport::{
     Capabilities, Capability, ProxyOps, Result, Transport, TransportError, WrapInTransportError,
 };
@@ -69,7 +69,7 @@ struct Inner {
 impl Inner {
     /// Helper method for sending one JSON request and receiving the response.  Called as part
     /// of the implementation of every method of the sub-traits (gpio, uart, spi, i2c).
-    fn execute_command(&self, req: Request) -> Result<Response> {
+    fn execute_command(&self, req: Box<dyn Request>) -> Result<Response> {
         self.send_json_request(req).wrap(ProxyError::JsonEncoding)?;
         match self.recv_json_response().wrap(ProxyError::JsonDecoding)? {
             Message::Res(res) => res,
@@ -78,7 +78,7 @@ impl Inner {
     }
 
     /// Send a one-line JSON encoded requests, terminated with one newline.
-    fn send_json_request(&self, req: Request) -> anyhow::Result<()> {
+    fn send_json_request(&self, req: Box<dyn Request>) -> anyhow::Result<()> {
         let mut conn = self.writer.borrow_mut();
         serde_json::to_writer(&mut *conn, &Message::Req(req))?;
         conn.write(&[b'\n'])?;
@@ -119,7 +119,7 @@ impl ProxyOpsImpl {
 
     // Convenience method for issuing Proxy-only commands via proxy protocol.
     fn execute_command(&self, command: ProxyRequest) -> Result<ProxyResponse> {
-        match self.inner.execute_command(Request::Proxy(command))? {
+        match self.inner.execute_command(Box::new(command))? {
             Response::Proxy(resp) => Ok(resp),
             _ => bail!(ProxyError::UnexpectedReply()),
         }
@@ -140,7 +140,7 @@ impl ProxyOps for ProxyOpsImpl {
 
 impl Transport for Proxy {
     fn capabilities(&self) -> Result<Capabilities> {
-        match self.inner.execute_command(Request::GetCapabilities)? {
+        match self.inner.execute_command(Box::new(GetCapabilitiesReq{}))? {
             Response::GetCapabilities(capabilities) => Ok(capabilities.add(Capability::PROXY)),
             _ => bail!(ProxyError::UnexpectedReply()),
         }

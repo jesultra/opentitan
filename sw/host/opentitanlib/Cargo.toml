@@ -40,6 +40,7 @@ mio-signals = "0.1.5" # mio-signals 0.2.0 exists, but requires mio 0.8.0
 
 serde = { version="1", features=["serde_derive"] }
 serde_json = "1"
+typetag = "0.1"
 deser-hjson = "1.0.2"
 rand = "0.8.4"
 erased-serde = "0.3.12"

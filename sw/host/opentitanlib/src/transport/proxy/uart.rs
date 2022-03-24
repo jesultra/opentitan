@@ -8,7 +8,7 @@ use std::time::Duration;
 use super::ProxyError;
 use crate::bail;
 use crate::io::uart::Uart;
-use crate::proxy::protocol::{Request, Response, UartRequest, UartResponse};
+use crate::proxy::protocol::{Response, UartReq, UartRequest, UartResponse};
 use crate::transport::proxy::{Inner, Proxy, Result};
 
 pub struct ProxyUart {
@@ -27,10 +27,10 @@ impl ProxyUart {
 
     // Convenience method for issuing UART commands via proxy protocol.
     fn execute_command(&self, command: UartRequest) -> Result<UartResponse> {
-        match self.inner.execute_command(Request::Uart {
+        match self.inner.execute_command(Box::new(UartReq {
             id: self.instance.clone(),
             command,
-        })? {
+        }))? {
             Response::Uart(resp) => Ok(resp),
             _ => bail!(ProxyError::UnexpectedReply()),
         }

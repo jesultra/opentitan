@@ -7,7 +7,7 @@ use std::rc::Rc;
 use super::ProxyError;
 use crate::io::spi::{SpiError, Target, Transfer, TransferMode};
 use crate::proxy::protocol::{
-    Request, Response, SpiRequest, SpiResponse, SpiTransferRequest, SpiTransferResponse,
+    Response, SpiReq, SpiRequest, SpiResponse, SpiTransferRequest, SpiTransferResponse,
 };
 use crate::transport::proxy::{Inner, Proxy, Result};
 use crate::util::voltage::Voltage;
@@ -29,10 +29,10 @@ impl ProxySpi {
 
     // Convenience method for issuing SPI commands via proxy protocol.
     fn execute_command(&self, command: SpiRequest) -> Result<SpiResponse> {
-        match self.inner.execute_command(Request::Spi {
+        match self.inner.execute_command(Box::new(SpiReq {
             id: self.instance.clone(),
             command,
-        })? {
+        }))? {
             Response::Spi(resp) => Ok(resp),
             _ => bail!(ProxyError::UnexpectedReply()),
         }

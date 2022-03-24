@@ -7,7 +7,7 @@ use std::rc::Rc;
 use super::ProxyError;
 use crate::io::i2c::{Bus, Transfer};
 use crate::proxy::protocol::{
-    I2cRequest, I2cResponse, I2cTransferRequest, I2cTransferResponse, Request, Response,
+    I2cReq, I2cRequest, I2cResponse, I2cTransferRequest, I2cTransferResponse, Response,
 };
 use crate::transport::proxy::{Inner, Proxy, Result};
 use crate::{bail, ensure};
@@ -28,10 +28,10 @@ impl ProxyI2c {
 
     // Convenience method for issuing I2C commands via proxy protocol.
     fn execute_command(&self, command: I2cRequest) -> Result<I2cResponse> {
-        match self.inner.execute_command(Request::I2c {
+        match self.inner.execute_command(Box::new(I2cReq {
             id: self.instance.clone(),
             command,
-        })? {
+        }))? {
             Response::I2c(resp) => Ok(resp),
             _ => bail!(ProxyError::UnexpectedReply()),
         }

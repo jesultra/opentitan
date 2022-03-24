@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::app::TransportWrapper;
 use crate::bootstrap::BootstrapOptions;
 use crate::io::emu::{EmuState, EmuValue};
 use crate::io::gpio::{PinMode, PullMode};
@@ -14,19 +15,13 @@ use crate::util::voltage::Voltage;
 
 #[derive(Serialize, Deserialize)]
 pub enum Message {
-    Req(Request),
+    Req(Box<dyn Request>),
     Res(Result<Response, TransportError>),
 }
 
-#[derive(Serialize, Deserialize)]
-pub enum Request {
-    GetCapabilities,
-    Gpio { id: String, command: GpioRequest },
-    Uart { id: String, command: UartRequest },
-    Spi { id: String, command: SpiRequest },
-    I2c { id: String, command: I2cRequest },
-    Emu { command: EmuRequest },
-    Proxy(ProxyRequest),
+#[typetag::serde(tag = "type")]
+pub trait Request {
+    fn handle(&self, transport: &TransportWrapper) -> Result<Response, TransportError>;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -38,6 +33,16 @@ pub enum Response {
     I2c(I2cResponse),
     Emu(EmuResponse),
     Proxy(ProxyResponse),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GetCapabilitiesReq {
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GpioReq {
+    pub id: String,
+    pub command: GpioRequest,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -54,6 +59,12 @@ pub enum GpioResponse {
     Read { value: bool },
     SetMode,
     SetPullMode,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UartReq {
+    pub id: String,
+    pub command: UartRequest,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -77,6 +88,12 @@ pub enum UartResponse {
     SetBaudrate,
     Read { data: Vec<u8> },
     Write,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SpiReq {
+    pub id: String,
+    pub command: SpiRequest,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -141,6 +158,12 @@ pub enum SpiResponse {
     RunTransaction {
         transaction: Vec<SpiTransferResponse>,
     },
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct I2cReq {
+    pub id: String,
+    pub command: I2cRequest,
 }
 
 #[derive(Serialize, Deserialize)]
