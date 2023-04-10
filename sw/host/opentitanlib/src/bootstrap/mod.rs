@@ -143,7 +143,9 @@ impl<'a> Bootstrap<'a> {
             // The transport happens to be connection to a remove opentitan session.  Pass
             // payload along with all relevant command line arguments to the remote session, and
             // it will run the actual bootstrapping logic.
-            transport.proxy_ops()?.bootstrap(options, payload)?;
+            transport
+                .proxy_ops()?
+                .bootstrap(options, payload, progress)?;
             return Ok(());
         }
         let updater: Box<dyn UpdateProtocol> = match options.protocol {

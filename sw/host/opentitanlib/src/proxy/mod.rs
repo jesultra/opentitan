@@ -19,7 +19,7 @@ mod socket_server;
 /// Interface for handlers of protocol messages, responding to each message with a single
 /// instance of the same protocol message.
 pub trait CommandHandler<Msg> {
-    fn execute_cmd(&mut self, msg: &Msg) -> Result<Msg>;
+    fn execute_cmd(&mut self, msg: &Msg, sink: impl FnMut(&Msg) -> Result<()>) -> Result<()>;
 }
 
 /// This is the main entry point for the session proxy.  This struct will either bind on a

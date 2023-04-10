@@ -5,6 +5,7 @@
 use anyhow::{bail, Result};
 
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
@@ -12,8 +13,8 @@ use std::time::Duration;
 use super::errors::SerializedError;
 use super::protocol::{
     EmuRequest, EmuResponse, GpioMonRequest, GpioMonResponse, GpioRequest, GpioResponse,
-    I2cRequest, I2cResponse, I2cTransferRequest, I2cTransferResponse, Message, ProxyRequest,
-    ProxyResponse, Request, Response, SpiRequest, SpiResponse, SpiTransferRequest,
+    I2cRequest, I2cResponse, I2cTransferRequest, I2cTransferResponse, Message, Progress,
+    ProxyRequest, ProxyResponse, Request, Response, SpiRequest, SpiResponse, SpiTransferRequest,
     SpiTransferResponse, UartRequest, UartResponse,
 };
 use super::CommandHandler;
@@ -22,7 +23,7 @@ use crate::bootstrap::Bootstrap;
 use crate::io::gpio::GpioPin;
 use crate::io::i2c;
 use crate::io::spi;
-use crate::transport::TransportError;
+use crate::transport::{ProgressIndicator, TransportError};
 
 /// Implementation of the handling of each protocol request, by means of an underlying
 /// `Transport` implementation.
@@ -43,7 +44,11 @@ impl<'a> TransportCommandHandler<'a> {
     /// by the given `Request`, and return a response to be sent to the client.  Any `Err`
     /// return from this method will be propagated to the remote client, without any server-side
     /// logging.
-    fn do_execute_cmd(&mut self, req: &Request) -> Result<Response> {
+    fn do_execute_cmd(
+        &mut self,
+        req: &Request,
+        sink: &mut impl FnMut(&Message) -> Result<()>,
+    ) -> Result<Response> {
         match req {
             Request::GetCapabilities => {
                 Ok(Response::GetCapabilities(self.transport.capabilities()?))
@@ -317,7 +322,13 @@ impl<'a> TransportCommandHandler<'a> {
             }
             Request::Proxy(command) => match command {
                 ProxyRequest::Bootstrap { options, payload } => {
-                    Bootstrap::update(self.transport, options, payload)?;
+                    let progress_forwarder = ProgressForwarder::new(sink);
+                    Bootstrap::update_with_progress(
+                        self.transport,
+                        options,
+                        payload,
+                        &progress_forwarder,
+                    )?;
                     Ok(Response::Proxy(ProxyResponse::Bootstrap))
                 }
                 ProxyRequest::ApplyPinStrapping { strapping_name } => {
@@ -333,17 +344,47 @@ impl<'a> TransportCommandHandler<'a> {
     }
 }
 
+struct ProgressForwarder<'a, S: FnMut(&Message) -> Result<()>> {
+    sink: RefCell<&'a mut S>,
+}
+
+impl<'a, S: FnMut(&Message) -> Result<()>> ProgressForwarder<'a, S> {
+    fn new(sink: &'a mut S) -> Self {
+        Self {
+            sink: RefCell::new(sink),
+        }
+    }
+}
+
+impl<'a, S: FnMut(&Message) -> Result<()>> ProgressIndicator for ProgressForwarder<'a, S> {
+    fn new_stage(&self, name: &str, total: usize) {
+        let _ = (self.sink.borrow_mut())(&Message::Prog(Progress::NewStage {
+            name: name.to_string(),
+            total,
+        }));
+    }
+    fn progress(&self, absolute: usize) {
+        let _ = (self.sink.borrow_mut())(&Message::Prog(Progress::Progress { absolute }));
+    }
+}
+
 impl<'a> CommandHandler<Message> for TransportCommandHandler<'a> {
     /// This method will perform whatever action on the underlying `Transport` that is requested
     /// by the given `Message`, and return a response to be sent to the client.  Any `Err`
     /// return from this method will be treated as an irrecoverable protocol error, causing an
     /// error message in the server log, and the connection to be terminated.
-    fn execute_cmd(&mut self, msg: &Message) -> Result<Message> {
+    fn execute_cmd(
+        &mut self,
+        msg: &Message,
+        mut sink: impl FnMut(&Message) -> Result<()>,
+    ) -> Result<()> {
         if let Message::Req(req) = msg {
             // Package either `Ok()` or `Err()` into a `Message`, to be sent via network.
-            return Ok(Message::Res(
-                self.do_execute_cmd(req).map_err(SerializedError::from),
-            ));
+            let resp = Message::Res(
+                self.do_execute_cmd(req, &mut sink)
+                    .map_err(SerializedError::from),
+            );
+            return sink(&resp);
         }
         bail!("Client sent non-Request to server!!!");
     }

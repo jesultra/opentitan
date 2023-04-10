@@ -11,6 +11,7 @@ use std::net::{TcpStream, ToSocketAddrs};
 use std::rc::Rc;
 use thiserror::Error;
 
+use crate::app::NoProgressBar;
 use crate::bootstrap::BootstrapOptions;
 use crate::impl_serializable_error;
 use crate::io::emu::Emulator;
@@ -18,8 +19,10 @@ use crate::io::gpio::{GpioMonitoring, GpioPin};
 use crate::io::i2c::Bus;
 use crate::io::spi::Target;
 use crate::io::uart::Uart;
-use crate::proxy::protocol::{Message, ProxyRequest, ProxyResponse, Request, Response};
-use crate::transport::{Capabilities, Capability, ProxyOps, Transport, TransportError};
+use crate::proxy::protocol::{Message, Progress, ProxyRequest, ProxyResponse, Request, Response};
+use crate::transport::{
+    Capabilities, Capability, ProgressIndicator, ProxyOps, Transport, TransportError,
+};
 
 mod emu;
 mod gpio;
@@ -72,13 +75,27 @@ impl Inner {
     /// Helper method for sending one JSON request and receiving the response.  Called as part
     /// of the implementation of every method of the sub-traits (gpio, uart, spi, i2c).
     fn execute_command(&self, req: Request) -> Result<Response> {
+        self.execute_command_progress(req, &NoProgressBar)
+    }
+
+    fn execute_command_progress(
+        &self,
+        req: Request,
+        progress: &dyn ProgressIndicator,
+    ) -> Result<Response> {
         self.send_json_request(req).context("json encoding")?;
-        match self.recv_json_response().context("json decoding")? {
-            Message::Res(res) => match res {
-                Ok(value) => Ok(value),
-                Err(e) => Err(anyhow::Error::from(e)),
-            },
-            _ => bail!(ProxyError::UnexpectedReply()),
+        loop {
+            match self.recv_json_response().context("json decoding")? {
+                Message::Res(res) => match res {
+                    Ok(value) => return Ok(value),
+                    Err(e) => return Err(anyhow::Error::from(e)),
+                },
+                Message::Prog(Progress::NewStage { name, total }) => {
+                    progress.new_stage(&name, total)
+                }
+                Message::Prog(Progress::Progress { absolute }) => progress.progress(absolute),
+                _ => bail!(ProxyError::UnexpectedReply()),
+            }
         }
     }
 
@@ -129,14 +146,36 @@ impl ProxyOpsImpl {
             _ => bail!(ProxyError::UnexpectedReply()),
         }
     }
+
+    fn execute_command_progress(
+        &self,
+        command: ProxyRequest,
+        progress: &dyn ProgressIndicator,
+    ) -> Result<ProxyResponse> {
+        match self
+            .inner
+            .execute_command_progress(Request::Proxy(command), progress)?
+        {
+            Response::Proxy(resp) => Ok(resp),
+            _ => bail!(ProxyError::UnexpectedReply()),
+        }
+    }
 }
 
 impl ProxyOps for ProxyOpsImpl {
-    fn bootstrap(&self, options: &BootstrapOptions, payload: &[u8]) -> Result<()> {
-        match self.execute_command(ProxyRequest::Bootstrap {
-            options: options.clone(),
-            payload: payload.to_vec(),
-        })? {
+    fn bootstrap(
+        &self,
+        options: &BootstrapOptions,
+        payload: &[u8],
+        progress: &dyn ProgressIndicator,
+    ) -> Result<()> {
+        match self.execute_command_progress(
+            ProxyRequest::Bootstrap {
+                options: options.clone(),
+                payload: payload.to_vec(),
+            },
+            progress,
+        )? {
             ProxyResponse::Bootstrap => Ok(()),
             _ => bail!(ProxyError::UnexpectedReply()), // Enable when second option is added
         }

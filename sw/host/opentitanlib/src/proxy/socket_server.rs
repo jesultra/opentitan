@@ -202,13 +202,15 @@ impl<Msg: DeserializeOwned + Serialize, T: CommandHandler<Msg>> JsonSocketServer
     fn process_any_requests(conn: &mut Connection, command_handler: &mut T) -> Result<()> {
         while let Some(request) = Self::get_complete_request(conn)? {
             // One complete request received, execute it.
-            let resp = command_handler.execute_cmd(&request)?;
-            // Encode response into tx_buf.
-            serde_json::to_writer(&mut conn.tx_buf, &resp)?;
-            conn.tx_buf.push(EOL_CODE);
-            // Transmit as much as possible without blocking, leaving any remnant in
-            // tx_buf.  poll() will tell us when more can be written.
-            conn.write()?;
+            command_handler.execute_cmd(&request, |resp| {
+                // Encode response into tx_buf.
+                serde_json::to_writer(&mut conn.tx_buf, &resp)?;
+                conn.tx_buf.push(EOL_CODE);
+                // Transmit as much as possible without blocking, leaving any remnant in
+                // tx_buf.  poll() will tell us when more can be written.
+                conn.write()?;
+                Ok(())
+            })?;
         }
         Ok(())
     }

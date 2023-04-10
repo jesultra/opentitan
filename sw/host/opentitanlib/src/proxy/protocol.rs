@@ -19,6 +19,7 @@ use crate::util::voltage::Voltage;
 pub enum Message {
     Req(Request),
     Res(Result<Response, SerializedError>),
+    Prog(Progress),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -45,6 +46,12 @@ pub enum Response {
     I2c(I2cResponse),
     Emu(EmuResponse),
     Proxy(ProxyResponse),
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum Progress {
+    NewStage { name: String, total: usize },
+    Progress { absolute: usize },
 }
 
 #[derive(Serialize, Deserialize)]
