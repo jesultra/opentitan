@@ -391,7 +391,7 @@ impl Inner {
             .ok_or(TransportError::UnicodePathError)?;
         let _lock = SerialPortExclusiveLock::lock(port_name)?;
         let mut port = TTYPort::open(
-            &serialport::new(port_name, 115_200).timeout(std::time::Duration::from_millis(100)),
+            &serialport::new(port_name, 115_200).timeout(std::time::Duration::from_millis(1000)),
         )
         .context("Failed to open HyperDebug console")?;
         flock_serial(&port, port_name)?;
