@@ -4,7 +4,7 @@
 
 use anyhow::{bail, ensure, Result};
 use rusb::{Direction, Recipient, RequestType};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::mem::size_of;
 use std::rc::Rc;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
@@ -25,6 +25,8 @@ pub struct HyperdebugSpiTarget {
     feature_bitmap: u16,
     max_sizes: MaxSizes,
     cs_asserted_count: Cell<u32>,
+    last_set_cs_pin: RefCell<Option<String>>,
+    last_set_max_speed: Cell<Option<u32>>,
 }
 
 const USB_SPI_PKT_ID_CMD_GET_USB_SPI_CONFIG: u16 = 0;
@@ -267,6 +269,8 @@ impl HyperdebugSpiTarget {
                 write: resp.max_write_chunk as usize,
             },
             cs_asserted_count: Cell::new(0),
+            last_set_cs_pin: RefCell::new(None),
+            last_set_max_speed: Cell::new(None),
         })
     }
 
@@ -644,21 +648,33 @@ impl Target for HyperdebugSpiTarget {
         Ok(captures.get(3).unwrap().as_str().parse().unwrap())
     }
     fn set_max_speed(&self, frequency: u32) -> Result<()> {
+        if self.last_set_max_speed.get() == Some(frequency) {
+            return Ok(());
+        }
         self.inner
             .cmd_no_output(&format!("spi set speed {} {}", &self.target_idx, frequency))
             .or_else(|_| {
                 self.inner
                     .cmd_no_output(&format!("spisetspeed {} {}", &self.target_idx, frequency))
-            })
+            })?;
+        self.last_set_max_speed.set(Some(frequency));
+        Ok(())
     }
 
     fn set_chip_select(&self, pin: &Rc<dyn GpioPin>) -> Result<()> {
+        let new_pin_name: &str = pin.get_internal_pin_name()
+            .ok_or(SpiError::InvalidChipSelect)?;
+        let mut last_set_cs_pin = self.last_set_cs_pin.borrow_mut();
+        if last_set_cs_pin.as_deref() == Some(new_pin_name) {
+            return Ok(());
+        }
         self.inner.cmd_no_output(&format!(
             "spi set cs {} {}",
             &self.target_idx,
-            pin.get_internal_pin_name()
-                .ok_or(SpiError::InvalidChipSelect)?
-        ))
+            new_pin_name,
+        ))?;
+        *last_set_cs_pin = Some(new_pin_name.to_string());
+        Ok(())
     }
 
     fn get_max_transfer_count(&self) -> Result<usize> {
