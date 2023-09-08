@@ -211,6 +211,36 @@
     {
       "name": "CC2",
       "alias_of": "CN7_10"
+    },
+    /*
+     * QSPI pins
+     */
+    {
+      "name": "CN10_10",
+      "mode": "Alternate"
+    },
+    {
+      "name": "CN10_23",
+      "mode": "Alternate"
+    },
+    {
+      "name": "CN10_24",
+      "mode": "Alternate"
+    },
+    /*
+     * SPI1 pins
+     */
+    {
+      "name": "CN7_12",
+      "mode": "Input"
+    },
+    {
+      "name": "CN7_14",
+      "mode": "Input"
+    },
+    {
+      "name": "CN7_15",
+      "mode": "Input"
     }
   ],
   "spi": [
@@ -223,8 +253,8 @@
     {
       "name": "TPM",
       "bits_per_sec": 250000,
-      "chip_select": "IOA7",
-      "alias_of": "QSPI"
+      //"chip_select": "IOA7",
+      "alias_of": "SPI1"
     }
   ],
   "i2c": [
@@ -237,6 +267,64 @@
       "bits_per_sec": 100000,
       "address": 0x50,
       "alias_of": "I2C1"
+    }
+  ],
+  "strappings": [
+    {
+      /*
+       * This strapping enables the SPI1 data pins, and disables QSPI.  To be
+       * used when the two are hard-wired together.
+       *
+       * How to use, from command line:
+       * opentitantool --conf ... gpio apply ENABLE_SPI1
+       * opentitantool --conf ... gpio remove ENABLE_SPI1
+       *
+       * How to use, from test script ti50_tpm.go:
+       * b.OpenTitanToolCommand(ctx, "gpio", "apply", "ENABLE_SPI1")
+       * b.OpenTitanToolCommand(ctx, "gpio", "remove", "ENABLE_SPI1")
+       *
+       * (The Golang tests do have b.GpioApplyStrap(), but it uses enum values,
+       * so additional declarations would be required to be able to use it with
+       * this new ENABLE_SPI, and that is not worth it, since this may not be
+       * the final solution.)
+       */
+      "name": "ENABLE_SPI1",
+      "pins": [
+	/*
+	 * QSPI pins
+	 */
+	{
+	  "name": "CN10_10",
+	  "mode": "Input"
+	},
+	{
+	  "name": "CN10_23",
+	  "mode": "Input"
+	},
+	{
+	  "name": "CN10_24",
+	  "mode": "Input"
+	},
+	/*
+	 * SPI1 pins
+	 */
+	{
+	  "name": "CN7_4",
+	  "mode": "PushPull"
+	},
+	{
+	  "name": "CN7_12",
+	  "mode": "Alternate"
+	},
+	{
+	  "name": "CN7_14",
+	  "mode": "Alternate"
+	},
+	{
+	  "name": "CN7_15",
+	  "mode": "Alternate"
+	}
+      ]
     }
   ],
   "uarts": [

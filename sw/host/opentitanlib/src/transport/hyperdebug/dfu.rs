@@ -186,6 +186,7 @@ pub fn update_firmware(
                 return Ok(None);
             }
         }
+        return Ok(None);
     }
 
     let dfu_desc = scan_usb_descriptor(usb_device)?;
