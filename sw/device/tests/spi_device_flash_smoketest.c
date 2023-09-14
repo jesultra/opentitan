@@ -137,8 +137,7 @@ static status_t configure_flash_mode(dif_spi_device_handle_t *spid) {
 
 bool test_main(void) {
   dif_spi_device_handle_t spid;
-  CHECK_DIF_OK(dif_spi_device_init_handle(
-      mmio_region_from_addr(TOP_EARLGREY_SPI_DEVICE_BASE_ADDR), &spid));
+  CHECK_DIF_OK(dif_spi_device_init_handle(mmio_region_from_addr(false), &spid));
 
   CHECK_STATUS_OK(configure_flash_mode(&spid));
 

@@ -282,6 +282,9 @@ use_repo(riscv_compliance, "riscv-compliance")
 coremark = use_extension("//third_party/coremark:extensions.bzl", "coremark")
 use_repo(coremark, "coremark")
 
+display_drivers = use_extension("//third_party/display_drivers:extensions.bzl", "display_drivers")
+use_repo(display_drivers, "display_drivers")
+
 xkcp = use_extension("//third_party/xkcp:extensions.bzl", "xkcp")
 use_repo(xkcp, "xkcp")
 
