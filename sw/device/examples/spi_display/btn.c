@@ -9,7 +9,7 @@
 #include "sw/device/lib/runtime/print.h"
 
 enum {
-  kBtnDebounceMillis = 30,
+  kBtnDebounceMillis = 100,
 };
 
 status_t scan_buttons(context_t *ctx, uint32_t timeout) {

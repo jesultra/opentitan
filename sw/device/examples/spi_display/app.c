@@ -70,7 +70,6 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
       (uint8_t *)logo_opentitan_160_39);
   timer_delay(1500);
 
-  size_t selected = 0;
   LOG_INFO("%s: Starting menu.", __func__);
   // Show the main menu.
   const char *items[] = {
@@ -84,26 +83,34 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
       .color = BGRColorBlue,
       .selected_color = BGRColorRed,
       .background = BGRColorWhite,
-      .items_count = sizeof(items) / sizeof(items[0]),
+      .items_count = ARRAYSIZE(items) - 1,
       .items = items,
   };
   lcd_st7735_clean(&lcd);
-  int last_scan = 0;
-  screen_show_menu(&lcd, &main_menu, selected);
+  screen_show_menu(&lcd, &main_menu, 0);
+  int selected = 0;
   do {
     status_t ret = scan_buttons(&ctx, 1000);
 
-    if (!status_ok(ret) || last_scan == UNWRAP(ret)) {
+    if (!status_ok(ret)) {
       continue;
     }
-    last_scan = UNWRAP(ret);
-    switch (last_scan) {
+
+    if (check_secret_menu((btn_t)UNWRAP(ret))) {
+      main_menu.items_count++;
+      screen_show_menu(&lcd, &main_menu, (size_t)selected);
+      timer_delay(1000);
+      continue;
+    }
+
+    switch (UNWRAP(ret)) {
       case kBtnUp:
-      case kBtnDown:
-      case kBtnLeft:
-      case kBtnRight:
-        selected = (size_t)last_scan;
+        selected--;
         break;
+      case kBtnDown:
+        selected++;
+        break;
+      case kBtnRight:
       case kBtnOk:
         switch (selected) {
           case 0:
@@ -117,10 +124,17 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
             break;
         }
         break;
+      case kBtnLeft:
       default:
         break;
     }
-    screen_show_menu(&lcd, &main_menu, selected);
+    const int kMaxSelection = ARRAYSIZE(items) - 1;
+    if (selected >= kMaxSelection) {
+      selected = kMaxSelection;
+    } else if (selected < 0) {
+      selected = 0;
+    }
+    screen_show_menu(&lcd, &main_menu, (size_t)selected);
   } while (1);
 }
 

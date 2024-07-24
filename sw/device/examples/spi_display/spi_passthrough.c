@@ -54,24 +54,24 @@ status_t spi_passthrough_demo(context_t *ctx) {
   };
   lcd_st7735_clean(ctx->lcd);
   bool authenticated = false;
-  int last_scan = 0;
-  screen_show_menu(ctx->lcd, &main_menu, selected);
+  screen_show_menu(ctx->lcd, &menu, selected);
   enable_secure_boot(ctx);
   busy_spin_micros(500 * 1000);
   bool loop = true;
+
   do {
     status_t ret = scan_buttons(ctx, 100);
-
-    if (!status_ok(ret) || last_scan == UNWRAP(ret)) {
+    if (!status_ok(ret)) {
       continue;
     }
-    last_scan = UNWRAP(ret);
-    switch (last_scan) {
+    switch (UNWRAP(ret)) {
       case kBtnUp:
-      case kBtnDown:
-      case kBtnLeft:
-        selected = (size_t)last_scan;
+        selected--;
         break;
+      case kBtnDown:
+        selected++;
+        break;
+      case kBtnRight:
       case kBtnOk:
         switch (selected) {
           case 0:  // Secure boot
@@ -95,9 +95,11 @@ status_t spi_passthrough_demo(context_t *ctx) {
             break;
         }
         break;
+      case kBtnLeft:
       default:
         break;
     }
+
     bool flag;
     TRY(dif_spi_device_get_csb_status(ctx->spid, &flag));
     if (!authenticated && !flag) {
@@ -105,7 +107,13 @@ status_t spi_passthrough_demo(context_t *ctx) {
       busy_spin_micros(2000 * 1000);
     }
     lcd_st7735_set_font_colors(ctx->lcd, bg, fg);
-    screen_show_menu(ctx->lcd, &main_menu, selected);
+    const int kMaxSelection = ARRAYSIZE(items) - 1;
+    if (selected >= kMaxSelection) {
+      selected = kMaxSelection;
+    } else if (selected < 0) {
+      selected = 0;
+    }
+    screen_show_menu(ctx->lcd, &menu, (size_t)selected);
   } while (loop);
 
   authenticated = false;
@@ -113,7 +121,7 @@ status_t spi_passthrough_demo(context_t *ctx) {
   screen_println(ctx->lcd, "                         ", alined_center, 6, true);
   TRY(dif_spi_device_set_passthrough_mode(ctx->spid, kDifToggleDisabled));
   TRY(dif_spi_host_output_set_enabled(ctx->spi_flash, false));
-  busy_spin_micros(3000 * 1000);
+  busy_spin_micros(2000 * 1000);
   lcd_st7735_clean(ctx->lcd);
   return OK_STATUS();
 }

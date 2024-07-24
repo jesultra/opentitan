@@ -58,16 +58,18 @@ static const Platform_t kBrewBoard = {
 
 static const Platform_t kVoyager1Board = {
     .csb = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc6),
-    .sd0 = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior2),
-    .clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior3),
-    .reset = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior4),
+    .sd0 = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob1),
+    .clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob2),
+    .i2c_sda = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob3),
+    .i2c_clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob4),
+    .reset = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc7),
     .dc = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc9),
-    .led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior1),
-    .btn_up = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc10),
-    .btn_down = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc11),
-    .btn_left = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc12),
-    .btn_right = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior0),
-    .btn_ok = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob2),
+    .led = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob0),
+    .btn_up = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc12),
+    .btn_down = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc10),
+    .btn_right = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc11),
+    .btn_left = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior10),
+    .btn_ok = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior11),
     .spi_speed = 16000000,  // 16Mhz
     .orientation = LCD_Rotate180,
 };
