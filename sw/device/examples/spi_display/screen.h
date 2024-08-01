@@ -15,6 +15,7 @@ enum {
   BGRColorBlue = 0xFF0000,
   BGRColorGreen = 0x00FF00,
   BGRColorRed = 0x0000FF,
+  BGRColorAmber = 0x00BFFF,
   BGRColorWhite = 0xFFFFFF,
 };
 

@@ -8,28 +8,29 @@
 #include "context.h"
 #include "demos.h"
 #include "screen.h"
+// #include "sw/device/lib/runtime/print.h"
+// #include "sw/device/lib/testing/profile.h"
+#include "sw/device/lib/crypto/include/sha2.h"
 #include "sw/device/lib/runtime/print.h"
 #include "sw/device/lib/testing/aes_testutils.h"
-#include "sw/device/lib/testing/profile.h"
 #include "sw/device/lib/testing/spi_device_testutils.h"
 #include "sw/device/lib/testing/spi_flash_testutils.h"
 #include "sw/device/lib/testing/test_framework/check.h"
 
-// static const uint8_t kHash[] = {0x8c, 0x12, 0x76, 0xd2, 0x40, 0x9a, 0x29,
-// 0x73,
-//                                 0xf8, 0xe,  0x16, 0x6a, 0x51, 0x70, 0x19,
-//                                 0x9d, 0x24, 0x11, 0xce, 0x8b, 0xde, 0xc,
-//                                 0xc7, 0xa8, 0x17, 0xbb, 0x29, 0xd1, 0x64,
-//                                 0xa4, 0x16, 0x6a};
+#define MANIFEST_HEADER 0xbebacafe
+#define MANIFEST_TAIL 0xdeadbeef
+typedef struct Manifest {
+  uint32_t header;
+  uint32_t bin_addr;
+  uint32_t bin_size;
+  uint32_t boot_addr;
+  uint32_t signature[4];
+  uint32_t tail;
+} Manifest_t;
 
-static const uint8_t kHash[] = {0x60, 0x5c, 0xc1, 0x11, 0x8d, 0x01, 0xe4, 0xad,
-                                0x15, 0x36, 0xef, 0x15, 0xe5, 0x2e, 0x2b, 0xf2,
-                                0x3c, 0x74, 0xda, 0x82, 0xf2, 0x14, 0x4b, 0x89,
-                                0xc6, 0x63, 0xab, 0xa2, 0xd3, 0xf5, 0x0f, 0x49};
+enum { kManifestAddr = 0x100000 };
 
-static const uint32_t kHashAddr = 1 * 1024 * 1024;
-
-static status_t check_hash(context_t *ctx);
+static status_t authenticate(context_t *ctx);
 static status_t configure_spi_flash_mode(dif_spi_device_handle_t *spid);
 static status_t enable_secure_boot(context_t *ctx);
 
@@ -44,7 +45,7 @@ status_t spi_passthrough_demo(context_t *ctx) {
       "Disable SecureBoot",
       "Exit",
   };
-  Menu_t main_menu = {
+  Menu_t menu = {
       .title = "Passthrough mode",
       .color = BGRColorBlue,
       .selected_color = BGRColorRed,
@@ -84,7 +85,7 @@ status_t spi_passthrough_demo(context_t *ctx) {
                 ctx->spid,
                 /*filters=*/0x00,
                 /*upload_write_commands=*/false));
-            lcd_st7735_set_font_colors(ctx->lcd, BGRColorRed, BGRColorWhite);
+            lcd_st7735_set_font_colors(ctx->lcd, BGRColorAmber, BGRColorWhite);
             screen_println(ctx->lcd, "Secure Boot", alined_center, 5, true);
             screen_println(ctx->lcd, "disabled!", alined_center, 6, true);
             break;
@@ -126,29 +127,107 @@ status_t spi_passthrough_demo(context_t *ctx) {
   return OK_STATUS();
 }
 
-static status_t check_hash(context_t *ctx) {
-  TRY(dif_spi_host_output_set_enabled(ctx->spi_flash, true));
+static status_t check_signature(context_t *ctx, uint8_t *sig, uint8_t *hash,
+                                size_t len) {
+  static dif_aes_transaction_t transaction = {
+      .operation = kDifAesOperationEncrypt,
+      .mode = kDifAesModeEcb,
+      .key_len = kDifAesKey128,
+      .key_provider = kDifAesKeySoftwareProvided,
+      .mask_reseeding = kDifAesReseedPer64Block,
+      .manual_operation = kDifAesManualOperationAuto,
+      .reseed_on_key_change = false,
+      .ctrl_aux_lock = false,
+  };
+  static const uint8_t kKeyShare1[] = {
+      0x0f, 0x1f, 0x2f, 0x3F, 0x4f, 0x5f, 0x6f, 0x7f,
+      0x8f, 0x9f, 0xaf, 0xbf, 0xcf, 0xdf, 0xef, 0xff,
+  };
+  static const uint8_t kAesModesKey128[] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca,
+                                            0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0,
+                                            0x85, 0x7d, 0x77, 0x81};
 
+  uint8_t key_share0[sizeof(kAesModesKey128)];
+  for (int i = 0; i < sizeof(kAesModesKey128); ++i) {
+    key_share0[i] = kAesModesKey128[i] ^ kKeyShare1[i];
+  }
+
+  dif_aes_key_share_t key;
+  memcpy(key.share0, key_share0, sizeof(key.share0));
+  memcpy(key.share1, kKeyShare1, sizeof(key.share1));
+  TRY(dif_aes_start(ctx->aes, &transaction, &key, NULL));
+  dif_aes_data_t in_data;
+  memcpy(in_data.data, hash, sizeof(in_data.data));
+  TRY(dif_aes_load_data(ctx->aes, in_data));
+  AES_TESTUTILS_WAIT_FOR_STATUS(ctx->aes, kDifAesStatusOutputValid, true, 5000);
+  dif_aes_data_t out_data;
+  TRY(dif_aes_read_output(ctx->aes, &out_data));
+  TRY(dif_aes_end(ctx->aes));
+
+  LOG_INFO("Signature");
+  base_hexdump((const char *)&out_data, sizeof(out_data));
+  if (memcmp(sig, (uint8_t *)out_data.data, len) == 0) {
+    return OK_STATUS();
+  }
+  return UNAUTHENTICATED();
+}
+
+static status_t authenticate(context_t *ctx) {
+  TRY(dif_spi_host_output_set_enabled(ctx->spi_flash, true));
+  // Send a software reset command to the flash.
   dif_spi_host_segment_t op = {
       .type = kDifSpiHostSegmentTypeOpcode,
       .opcode = {.opcode = kSpiDeviceFlashOpResetEnable,
                  .width = kDifSpiHostWidthStandard}};
   TRY(dif_spi_host_transaction(ctx->spi_flash, /*cs_id=*/0, &op, 1));
 
-  uint8_t buf[32];
+  // Read manifest
+  Manifest_t manifest = {0};
   TRY(spi_flash_testutils_read_op(ctx->spi_flash, kSpiDeviceFlashOpReadNormal,
-                                  buf, sizeof(buf), kHashAddr,
+                                  (uint8_t *)&manifest, sizeof(manifest),
+                                  kManifestAddr,
                                   /*addr_is_4b=*/false,
                                   /*width=*/1,
                                   /*dummy=*/0));
-  if (memcmp(buf, kHash, ARRAYSIZE(kHash))) {
-    screen_println(ctx->lcd, "Tamper detected!", alined_center, 5, true);
-    screen_println(ctx->lcd, "                         ", alined_center, 6,
-                   true);
-    busy_spin_micros(3000 * 1000);
+
+  LOG_INFO("Manifest %d bytes", sizeof(manifest));
+  base_hexdump((const char *)&manifest, sizeof(manifest));
+  if (manifest.header != MANIFEST_HEADER || manifest.tail != MANIFEST_TAIL) {
     return UNAUTHENTICATED();
   }
-  return OK_STATUS();
+  uint8_t buf[256];
+
+  otcrypto_sha2_context_t crypto;
+  TRY(otcrypto_sha2_init(kOtcryptoHashModeSha256, &crypto));
+  for (uint32_t addr = manifest.bin_addr, size = manifest.bin_size; size > 0;
+       addr += sizeof(buf)) {
+    uint32_t block_len = size > sizeof(buf) ? sizeof(buf) : size;
+    size -= block_len;
+    TRY(spi_flash_testutils_read_op(ctx->spi_flash, kSpiDeviceFlashOpReadNormal,
+                                    buf, block_len, addr,
+                                    /*addr_is_4b=*/false,
+                                    /*width=*/1,
+                                    /*dummy=*/0));
+    otcrypto_const_byte_buf_t msg_buf = {
+        .data = buf,
+        .len = block_len,
+    };
+    TRY(otcrypto_sha2_update(&crypto, &msg_buf));
+  }
+  uint32_t hash[32 / sizeof(uint32_t)];
+  otcrypto_hash_digest_t digest_buf = {
+      .data = hash,
+      .len = ARRAYSIZE(hash),
+  };
+  CHECK_STATUS_OK(otcrypto_sha2_final(&crypto, &digest_buf));
+
+  LOG_INFO("\r\n\nSha256 from addr %x to %x:", manifest.bin_addr,
+           manifest.bin_addr + manifest.bin_size);
+  base_hexdump((const char *)&hash, sizeof(hash));
+  status_t status =
+      check_signature(ctx, (uint8_t *)manifest.signature, (uint8_t *)hash,
+                      sizeof(manifest.signature));
+  return status;
 }
 
 static status_t configure_spi_flash_mode(dif_spi_device_handle_t *spid) {
@@ -172,10 +251,6 @@ static status_t configure_spi_flash_mode(dif_spi_device_handle_t *spid) {
   TRY(dif_spi_device_set_flash_command_slot(
       spid, kSpiDeviceReadCommandSlotBase + 3, kDifToggleEnabled, cmd));
 
-  // LOG_INFO("SYNC: Flash mode");
-
-  // busy_spin_micros(1 * 1000 * 1000);
-
   dif_spi_device_irq_state_snapshot_t spi_device_irqs =
       (dif_spi_device_irq_state_snapshot_t)0xffffffff;
 
@@ -187,7 +262,11 @@ static status_t enable_secure_boot(context_t *ctx) {
   TRY(dif_spi_device_set_passthrough_mode(ctx->spid, kDifToggleDisabled));
   TRY(dif_spi_host_output_set_enabled(ctx->spi_flash, false));
   lcd_st7735_set_font_colors(ctx->lcd, BGRColorRed, BGRColorWhite);
-  if (status_err(check_hash(ctx))) {
+  if (status_err(authenticate(ctx))) {
+    screen_println(ctx->lcd, "Tamper detected!", alined_center, 5, true);
+    screen_println(ctx->lcd, "                         ", alined_center, 6,
+                   true);
+    busy_spin_micros(3000 * 1000);
     TRY(configure_spi_flash_mode(ctx->spid));
     return PERMISSION_DENIED();
   }

@@ -35,6 +35,7 @@ opentitan_test(
     ),
     silicon = silicon_params(
         interface = "ftdi",
+        timeout = "eternal",
     ),
     deps = [
         ":spi_display_app",
@@ -64,6 +65,7 @@ cc_library(
         "//sw/device/examples/spi_display/images:logo_opentitan_160_39px",
         "//sw/device/examples/spi_display/images:logo_tux_80_95px",
         "//sw/device/examples/spi_display/images:shape_opentitan_80_80px",
+        "//sw/device/lib/crypto:crypto",
         "@display_drivers//:display_drivers_lib",
     ],
 )
