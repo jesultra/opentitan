@@ -20,10 +20,11 @@ static uint32_t spi_write(void *handle, uint8_t *data, size_t len);
 static uint32_t gpio_write(void *handle, bool cs, bool dc);
 static void timer_delay(uint32_t ms);
 static status_t aes_demo(context_t *ctx);
+static bool check_secret_menu(btn_t btn);
 
 status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
-                  dif_spi_device_handle_t *spid, dif_gpio_t *gpio,
-                  dif_aes_t *aes, display_pin_map_t pins,
+                  dif_spi_device_handle_t *spid, dif_i2c_t *i2c,
+                  dif_gpio_t *gpio, dif_aes_t *aes, display_pin_map_t pins,
                   LCD_Orientation orientation) {
   LOG_INFO("%s: Initializing pins", __func__);
   // Set the initial state of the LCD control pins.
@@ -38,7 +39,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 
   // Init LCD driver and set the SPI driver.
   St7735Context lcd;
-  context_t ctx = {spi_lcd, spi_flash, spid, gpio, aes, pins, &lcd};
+  context_t ctx = {spi_lcd, spi_flash, spid, i2c, gpio, aes, pins, &lcd};
   LCD_Interface interface = {
       .handle = &ctx,              // SPI handle.
       .spi_write = spi_write,      // SPI write callback.
@@ -71,19 +72,18 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   timer_delay(1500);
 
   LOG_INFO("%s: Starting menu.", __func__);
+  // TRY(i2c_eeprom(&ctx));
   // Show the main menu.
   const char *items[] = {
-      "1. AES ECB/CDC",
-      "2. SPI Passthrough",
-      "3. CTAP (FIDO)",
-      "4. TPM",
+      "1. AES ECB/CDC", "2. SPI Passthrough", "3. CTAP (FIDO)",
+      "4. TPM",         "5. Selftest",
   };
   Menu_t main_menu = {
       .title = "Demo mode",
       .color = BGRColorBlue,
       .selected_color = BGRColorRed,
       .background = BGRColorWhite,
-      .items_count = ARRAYSIZE(items) - 1,
+      .items_count = ARRAYSIZE(items),
       .items = items,
   };
   lcd_st7735_clean(&lcd);
@@ -119,6 +119,12 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
           case 1:
             TRY(spi_passthrough_demo(&ctx));
             break;
+          case 4:
+            TRY(self_test(&ctx));
+            break;
+          case 5:
+            TRY(i2c_eeprom(&ctx));
+            break;
           default:
             screen_println(&lcd, "Option not avail!", alined_center, 8, true);
             break;
@@ -145,6 +151,25 @@ static status_t aes_demo(context_t *ctx) {
   }
 
   return OK_STATUS();
+}
+
+static bool check_secret_menu(btn_t btn) {
+  static const btn_t kSecret[] = {
+      kBtnDown, kBtnDown, kBtnDown, kBtnDown, kBtnLeft,  kBtnUp,
+      kBtnUp,   kBtnUp,   kBtnUp,   kBtnLeft, kBtnRight,
+  };
+  static size_t index = 0;
+  if (kSecret[index] == btn) {
+    if (index == ARRAYSIZE(kSecret) - 1) {
+      LOG_INFO("Unloked");
+      return true;
+    }
+    index = (index + 1) % ARRAYSIZE(kSecret);
+    LOG_INFO("secret: %u", index);
+  } else {
+    index = 0;
+  }
+  return false;
 }
 
 static uint32_t spi_write(void *handle, uint8_t *data, size_t len) {

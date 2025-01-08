@@ -7,9 +7,11 @@
 #include "sw/device/lib/arch/device.h"
 #include "sw/device/lib/base/mmio.h"
 #include "sw/device/lib/dif/dif_gpio.h"
+#include "sw/device/lib/dif/dif_i2c.h"
 #include "sw/device/lib/dif/dif_pinmux.h"
 #include "sw/device/lib/dif/dif_spi_host.h"
 #include "sw/device/lib/runtime/log.h"
+#include "sw/device/lib/testing/i2c_testutils.h"
 #include "sw/device/lib/testing/pinmux_testutils.h"
 #include "sw/device/lib/testing/test_framework/check.h"
 #include "sw/device/lib/testing/test_framework/ottf_main.h"
@@ -22,6 +24,8 @@ typedef struct Platform {
   pinmux_testutils_mio_dict_t csb;
   pinmux_testutils_mio_dict_t sd0;
   pinmux_testutils_mio_dict_t clk;
+  pinmux_testutils_mio_dict_t i2c_sda;
+  pinmux_testutils_mio_dict_t i2c_clk;
   pinmux_testutils_mio_dict_t reset;
   pinmux_testutils_mio_dict_t dc;
   pinmux_testutils_mio_dict_t led;
@@ -45,17 +49,6 @@ static const Platform_t kCw340Board = {
     .orientation = LCD_Rotate0,
 };
 
-static const Platform_t kBrewBoard = {
-    .csb = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob1),
-    .sd0 = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob7),
-    .clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob9),
-    .reset = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob3),
-    .dc = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob5),
-    .led = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob11),
-    .spi_speed = 12000000,  // 12Mhz
-    .orientation = LCD_Rotate0,
-};
-
 static const Platform_t kVoyager1Board = {
     .csb = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc6),
     .sd0 = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob1),
@@ -75,15 +68,24 @@ static const Platform_t kVoyager1Board = {
 };
 
 static status_t pinmux_select(const dif_pinmux_t *pinmux, Platform_t pinmap) {
-  // CSB.
+  // SPI.
   TRY(dif_pinmux_output_select(pinmux, pinmap.csb.out,
                                kTopEarlgreyPinmuxOutselSpiHost1Csb));
-
   TRY(dif_pinmux_output_select(pinmux, pinmap.sd0.out,
                                kTopEarlgreyPinmuxOutselSpiHost1Sd0));
-  // SCLK.
   TRY(dif_pinmux_output_select(pinmux, pinmap.clk.out,
                                kTopEarlgreyPinmuxOutselSpiHost1Sck));
+
+  // I2C
+  TRY(dif_pinmux_output_select(pinmux, pinmap.i2c_sda.out,
+                               kTopEarlgreyPinmuxOutselI2c0Sda));
+  TRY(dif_pinmux_output_select(pinmux, pinmap.i2c_clk.out,
+                               kTopEarlgreyPinmuxOutselI2c0Scl));
+
+  TRY(dif_pinmux_input_select(pinmux, kTopEarlgreyPinmuxPeripheralInI2c0Sda,
+                              pinmap.i2c_sda.in));
+  TRY(dif_pinmux_input_select(pinmux, kTopEarlgreyPinmuxPeripheralInI2c0Scl,
+                              pinmap.i2c_clk.in));
 
   // RESET.
   TRY(dif_pinmux_output_select(pinmux, pinmap.reset.out,
@@ -130,6 +132,7 @@ static status_t pinmux_select(const dif_pinmux_t *pinmux, Platform_t pinmap) {
 }
 
 bool test_main(void) {
+  dif_i2c_t i2c;
   dif_spi_host_t spi_lcd;
   dif_spi_host_t spi_flash;
   const volatile Platform_t *config = NULL;
@@ -140,7 +143,6 @@ bool test_main(void) {
       break;
     case kDeviceSilicon:
       LOG_INFO("Silicon detected!");
-      config = &kBrewBoard;
       config = &kVoyager1Board;
       break;
     default:
@@ -151,6 +153,11 @@ bool test_main(void) {
   mmio_region_t addr = mmio_region_from_addr(TOP_EARLGREY_PINMUX_AON_BASE_ADDR);
   CHECK_DIF_OK(dif_pinmux_init(addr, &pinmux));
   pinmux_select(&pinmux, *config);
+
+  addr = mmio_region_from_addr(TOP_EARLGREY_I2C0_BASE_ADDR);
+  CHECK_DIF_OK(dif_i2c_init(addr, &i2c));
+  CHECK_STATUS_OK(i2c_testutils_set_speed(&i2c, kDifI2cSpeedStandard, /*sda_rise_nanos=*/400, /*sda_fall_nanos=*/110));
+  CHECK_DIF_OK(dif_i2c_host_set_enabled(&i2c, kDifToggleEnabled));
 
   addr = mmio_region_from_addr(TOP_EARLGREY_SPI_HOST1_BASE_ADDR);
   CHECK_DIF_OK(dif_spi_host_init(addr, &spi_lcd));
@@ -188,9 +195,9 @@ bool test_main(void) {
   CHECK_DIF_OK(dif_aes_init(addr, &aes));
   CHECK_DIF_OK(dif_aes_reset(&aes));
 
-  run_demo(&spi_lcd, &spi_flash, &spid, &gpio, &aes,
-           (display_pin_map_t){0, 1, 2, 11, 4, 5, 6, 7, 8},
-           config->orientation);
+  CHECK_STATUS_OK(run_demo(&spi_lcd, &spi_flash, &spid, &i2c, &gpio, &aes,
+                           (display_pin_map_t){0, 1, 2, 11, 4, 5, 6, 7, 8},
+                           config->orientation));
 
   return true;
 }

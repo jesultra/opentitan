@@ -34,8 +34,8 @@ opentitan_test(
         },
     ),
     silicon = silicon_params(
-        interface = "ftdi",
         timeout = "eternal",
+        interface = "ftdi",
     ),
     deps = [
         ":spi_display_app",
@@ -49,6 +49,8 @@ cc_library(
         "aes_demo.c",
         "app.c",
         "btn.c",
+        "i2c_eeprom.c",
+        "self_test.c",
         "screen.c",
         "spi_passthrough.c",
     ],
@@ -65,7 +67,7 @@ cc_library(
         "//sw/device/examples/spi_display/images:logo_opentitan_160_39px",
         "//sw/device/examples/spi_display/images:logo_tux_80_95px",
         "//sw/device/examples/spi_display/images:shape_opentitan_80_80px",
-        "//sw/device/lib/crypto:crypto",
+        "//sw/device/lib/crypto",
         "@display_drivers//:display_drivers_lib",
     ],
 )
@@ -79,6 +81,7 @@ cc_library(
         "//sw/device/lib/crt",
         "//sw/device/lib/dif:aes",
         "//sw/device/lib/dif:gpio",
+        "//sw/device/lib/dif:i2c",
         "//sw/device/lib/dif:pinmux",
         "//sw/device/lib/dif:spi_device",
         "//sw/device/lib/dif:spi_host",
@@ -87,6 +90,7 @@ cc_library(
         "//sw/device/lib/runtime:log",
         "//sw/device/lib/runtime:print",
         "//sw/device/lib/testing:aes_testutils",
+        "//sw/device/lib/testing:i2c_testutils",
         "//sw/device/lib/testing:pinmux_testutils",
         "//sw/device/lib/testing:profile",
         "//sw/device/lib/testing:spi_device_testutils",

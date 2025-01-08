@@ -3,6 +3,7 @@
 
 #include "sw/device/lib/dif/dif_aes.h"
 #include "sw/device/lib/dif/dif_gpio.h"
+#include "sw/device/lib/dif/dif_i2c.h"
 #include "sw/device/lib/dif/dif_spi_device.h"
 #include "sw/device/lib/dif/dif_spi_host.h"
 
@@ -24,6 +25,7 @@ typedef struct context {
   dif_spi_host_t *spi_lcd;
   dif_spi_host_t *spi_flash;
   dif_spi_device_handle_t *spid;
+  dif_i2c_t *i2c;
   dif_gpio_t *gpio;
   dif_aes_t *aes;
   display_pin_map_t pins;

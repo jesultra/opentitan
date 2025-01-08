@@ -10,5 +10,7 @@
 
 status_t run_aes(context_t *app);
 status_t spi_passthrough_demo(context_t *ctx);
+status_t i2c_eeprom(context_t *ctx);
+status_t i2c_light_sensor(context_t *ctx);
 
 #endif
