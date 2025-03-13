@@ -33,9 +33,9 @@ static status_t spi_flash_test(context_t *ctx);
 status_t self_test(context_t *ctx) {
   size_t line = 0;
   lcd_st7735_clean(ctx->lcd);
-  lcd_st7735_set_font_colors(ctx->lcd, BGRColorBlue, BGRColorWhite);
+  lcd_st7735_set_font_colors(ctx->lcd, RGBColorBlue, RGBColorWhite);
   screen_println(ctx->lcd, "Self test", alined_center, line++, true);
-  lcd_st7735_set_font_colors(ctx->lcd, BGRColorWhite, BGRColorBlue);
+  lcd_st7735_set_font_colors(ctx->lcd, RGBColorWhite, RGBColorBlue);
 
   screen_println(ctx->lcd, "proximity..", alined_left, line, true);
   TRY(proximity_sensor_test(ctx));

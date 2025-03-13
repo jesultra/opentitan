@@ -11,12 +11,12 @@
 
 // Color codes in BGR format.
 enum {
-  BGRColorBlack = 0x000000,
-  BGRColorBlue = 0xFF0000,
-  BGRColorGreen = 0x00FF00,
-  BGRColorRed = 0x0000FF,
-  BGRColorAmber = 0x00BFFF,
-  BGRColorWhite = 0xFFFFFF,
+  RGBColorBlack = 0x000000,
+  RGBColorBlue = 0x0000FF,
+  RGBColorGreen = 0x00FF00,
+  RGBColorRed = 0xFF0000,
+  RGBColorAmber = 0xFFBF00,
+  RGBColorWhite = 0xFFFFFF,
 };
 
 // Text alignment.

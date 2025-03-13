@@ -43,9 +43,9 @@ status_t run_aes(context_t *app) {
   int image_len = sizeof(tmux_80_95);
 
   lcd_st7735_clean(app->lcd);
-  lcd_st7735_set_font_colors(app->lcd, BGRColorBlue, BGRColorWhite);
+  lcd_st7735_set_font_colors(app->lcd, RGBColorBlue, RGBColorWhite);
   screen_println(app->lcd, "ECB      CBC", alined_center, 0, true);
-  lcd_st7735_set_font_colors(app->lcd, BGRColorWhite, BGRColorBlue);
+  lcd_st7735_set_font_colors(app->lcd, RGBColorWhite, RGBColorBlue);
 
   lcd_st7735_draw_rgb565(app->lcd, rectangle, plain_image);
   rectangle.origin.x = rectangle.width;

@@ -47,9 +47,9 @@ status_t spi_passthrough_demo(context_t *ctx) {
   };
   Menu_t menu = {
       .title = "Passthrough mode",
-      .color = BGRColorBlue,
-      .selected_color = BGRColorRed,
-      .background = BGRColorWhite,
+      .color = RGBColorBlue,
+      .selected_color = RGBColorRed,
+      .background = RGBColorWhite,
       .items_count = sizeof(items) / sizeof(items[0]),
       .items = items,
   };
@@ -85,7 +85,7 @@ status_t spi_passthrough_demo(context_t *ctx) {
                 ctx->spid,
                 /*filters=*/0x00,
                 /*upload_write_commands=*/false));
-            lcd_st7735_set_font_colors(ctx->lcd, BGRColorAmber, BGRColorWhite);
+            lcd_st7735_set_font_colors(ctx->lcd, RGBColorAmber, RGBColorWhite);
             screen_println(ctx->lcd, "Secure Boot", alined_center, 5, true);
             screen_println(ctx->lcd, "disabled!", alined_center, 6, true);
             break;
@@ -261,7 +261,7 @@ static status_t configure_spi_flash_mode(dif_spi_device_handle_t *spid) {
 static status_t enable_secure_boot(context_t *ctx) {
   TRY(dif_spi_device_set_passthrough_mode(ctx->spid, kDifToggleDisabled));
   TRY(dif_spi_host_output_set_enabled(ctx->spi_flash, false));
-  lcd_st7735_set_font_colors(ctx->lcd, BGRColorRed, BGRColorWhite);
+  lcd_st7735_set_font_colors(ctx->lcd, RGBColorRed, RGBColorWhite);
   if (status_err(authenticate(ctx))) {
     screen_println(ctx->lcd, "Tamper detected!", alined_center, 5, true);
     screen_println(ctx->lcd, "                         ", alined_center, 6,
@@ -275,7 +275,7 @@ static status_t enable_secure_boot(context_t *ctx) {
       ctx->spid,
       /*filters=*/0x00,
       /*upload_write_commands=*/false));
-  lcd_st7735_set_font_colors(ctx->lcd, BGRColorGreen, BGRColorWhite);
+  lcd_st7735_set_font_colors(ctx->lcd, RGBColorGreen, RGBColorWhite);
   screen_println(ctx->lcd, "SecureBoot", alined_center, 5, true);
   screen_println(ctx->lcd, "enabled!", alined_center, 6, true);
   return OK_STATUS();

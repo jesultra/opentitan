@@ -54,7 +54,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 
   // Setup text font bitmaps to be used and the colors.
   lcd_st7735_set_font(&lcd, &lucidaConsole_10ptFont);
-  lcd_st7735_set_font_colors(&lcd, BGRColorWhite, BGRColorBlack);
+  lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
 
   LOG_INFO("%s: Clearing...", __func__);
   // Clean display with a white rectangle.
@@ -72,7 +72,6 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   timer_delay(1500);
 
   LOG_INFO("%s: Starting menu.", __func__);
-  // TRY(i2c_eeprom(&ctx));
   // Show the main menu.
   const char *items[] = {
       "1. AES ECB/CDC", "2. SPI Passthrough", "3. CTAP (FIDO)",
@@ -80,9 +79,9 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   };
   Menu_t main_menu = {
       .title = "Demo mode",
-      .color = BGRColorBlue,
-      .selected_color = BGRColorRed,
-      .background = BGRColorWhite,
+      .color = RGBColorBlue,
+      .selected_color = RGBColorRed,
+      .background = RGBColorWhite,
       .items_count = ARRAYSIZE(items),
       .items = items,
   };
