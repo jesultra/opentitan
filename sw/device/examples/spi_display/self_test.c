@@ -7,6 +7,7 @@
 #include "btn.h"
 #include "context.h"
 #include "demos.h"
+#include "i2c_eeprom.h"
 #include "screen.h"
 //#include "sw/device/lib/crypto/include/hash.h"
 #include "sw/device/lib/runtime/print.h"
@@ -108,21 +109,26 @@ static status_t poll_while_busy(dif_i2c_t *i2c) {
 }
 
 static status_t eeprom_test(context_t *ctx) {
-  const uint8_t kAddr[1] = {0x00};
-  uint8_t data[] = {kAddr[0], 'L', 'o', 'w', 'r', 'i', 's', 'c', 0};
-  TRY(i2c_testutils_write(ctx->i2c, kEepromAddr, sizeof(data), data, false));
-  TRY(poll_while_busy(ctx->i2c));
+  EepromReader reader;
+  if (status_ok(eeprom_init_rendable(&reader, ctx))) {
+    return OK_STATUS();
+  } else {
+    const uint8_t kAddr[1] = {0x00};
+    uint8_t data[] = {kAddr[0], 'L', 'o', 'w', 'r', 'i', 's', 'c', 0};
+    TRY(i2c_testutils_write(ctx->i2c, kEepromAddr, sizeof(data), data, false));
+    TRY(poll_while_busy(ctx->i2c));
 
-  uint8_t read_data[sizeof(data)] = {
-      kAddr[0],
-  };
-  TRY(i2c_testutils_write(ctx->i2c, kEepromAddr, sizeof(kAddr), kAddr, true));
-  TRY(i2c_testutils_read(ctx->i2c, kEepromAddr, sizeof(read_data) - 1,
-                         &read_data[1], kDefaultTimeoutMicros));
+    uint8_t read_data[sizeof(data)] = {
+        kAddr[0],
+    };
+    TRY(i2c_testutils_write(ctx->i2c, kEepromAddr, sizeof(kAddr), kAddr, true));
+    TRY(i2c_testutils_read(ctx->i2c, kEepromAddr, sizeof(read_data) - 1,
+                           &read_data[1], kDefaultTimeoutMicros));
 
-  LOG_INFO("i2c_eeprom_read: %s", read_data);
+    LOG_INFO("i2c_eeprom_read: %s", read_data);
 
-  TRY_CHECK_ARRAYS_EQ(data, read_data, ARRAYSIZE(data));
+    TRY_CHECK_ARRAYS_EQ(data, read_data, ARRAYSIZE(data));
+  }
 
   return OK_STATUS();
 }

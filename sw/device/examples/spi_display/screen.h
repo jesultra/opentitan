@@ -26,6 +26,17 @@ typedef enum TextAlignment {
   alined_left,
 } TextAlignment_t;
 
+inline uint16_t rgb24_to_bgr565(uint32_t rgb) {
+  uint8_t r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
+  uint16_t color = (uint16_t)(((b & 0xF8) << 8) | ((g & 0xFC) << 3) | (r >> 3));
+  return color;
+}
+
+static inline uint32_t bgr565_to_rgb24(uint16_t bgr) {
+  uint8_t b = (bgr >> 11) & 0x1F, g = (bgr >> 5) & 0x3F, r = bgr & 0x1F;
+  return (uint32_t)((r << 19) | (g << 10) | (b << 3));
+}
+
 /**
  * @brief Draw a NULL terminated string in the screen.
  *

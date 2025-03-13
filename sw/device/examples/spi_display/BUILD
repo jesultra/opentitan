@@ -60,6 +60,7 @@ cc_library(
         "context.h",
         "demos.h",
         "screen.h",
+        "i2c_eeprom.h",
     ],
     deps = [
         ":spi_display_lib",
