@@ -212,7 +212,7 @@ static status_t write(context_t *ctx) {
   }
 
   {
-    Rendable rendable = {.type = kTypeColloredText,
+    Rendable rendable = {.type = kTypeFormattedText,
                          .u.collored_text = {
                              .posx = 0,
                              .posy = 62,
