@@ -74,7 +74,7 @@ status_t eeprom_reader_next_rendable(EepromReader *reader, Rendable *rendable) {
                  rendable->u.positioned_text.len,
                  rendable->u.positioned_text.string);
         break;
-      case kTypeColloredText:
+      case kTypeFormattedText:
         rendable->u.collored_text.string[rendable->u.collored_text.len] = 0;
         LOG_INFO(
             "type: %x, posx:%u, posy:%u, bg_collor:%x, fg_collor:%x, len: %u, "
