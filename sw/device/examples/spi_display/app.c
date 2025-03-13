@@ -209,7 +209,7 @@ static status_t credits(context_t *ctx) {
           break;
         case kTypePositionedText:
           break;
-        case kTypeColloredText:
+        case kTypeFormattedText:
           lcd_st7735_set_font_colors(
               ctx->lcd, bgr565_to_rgb24(rendable.u.collored_text.bg_collor),
               bgr565_to_rgb24(rendable.u.collored_text.fg_collor));
