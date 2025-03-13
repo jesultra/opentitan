@@ -17,7 +17,7 @@ typedef enum __attribute__((packed)) {
   kTypeOtImage = 0,
   kTypeText = 1,
   kTypePositionedText = 2,
-  kTypeColloredText = 3,
+  kTypeFormattedText = 3,
 } Type;
 
 typedef struct __attribute__((packed)) {
