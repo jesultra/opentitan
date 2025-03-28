@@ -28,8 +28,7 @@ static status_t credits(context_t *ctx);
 status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
                   dif_spi_device_handle_t *spid, dif_i2c_t *i2c,
                   dif_gpio_t *gpio, dif_aes_t *aes, display_pin_map_t dsp_pins,
-                  btn_pin_map_t btn_pins,
-                  status_led_pin_map_t led_pins,
+                  btn_pin_map_t btn_pins, status_led_pin_map_t led_pins,
                   LCD_Orientation orientation) {
   LOG_INFO("%s: Initializing pins", __func__);
   // Set the initial state of the LCD control pins.
@@ -44,7 +43,8 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 
   // Init LCD driver and set the SPI driver.
   St7735Context lcd;
-  context_t ctx = {spi_lcd, spi_flash, spid, i2c, gpio, aes, dsp_pins, btn_pins, led_pins, &lcd};
+  context_t ctx = {spi_lcd, spi_flash, spid,     i2c,      gpio,
+                   aes,     dsp_pins,  btn_pins, led_pins, &lcd};
   LCD_Interface interface = {
       .handle = &ctx,              // SPI handle.
       .spi_write = spi_write,      // SPI write callback.
@@ -68,6 +68,8 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   LOG_INFO("%s: Ot logo...", __func__);
   screen_println(&lcd, "Opentitan", alined_center, 7, true);
   screen_println(&lcd, "Boot successful!", alined_center, 8, true);
+  TRY(dif_gpio_write(gpio, led_pins.boot_ok, 0x1));
+  TRY(dif_gpio_write(gpio, led_pins.app_ok, 0x1));
   timer_delay(1500);
   // Draw the splash screen with a RGB 565 bitmap and text in the bottom.
   lcd_st7735_draw_rgb565(

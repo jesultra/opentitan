@@ -71,13 +71,13 @@ static const Platform_t kVoyager1Board = {
     .btn_right = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc11),
     .btn_left = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior10),
     .btn_ok = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior11),
-    .allowed_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa2),
-    .blocked_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa3),
-    .status_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa4),
-    .boot_ok_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa5),
-    .app_ok_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa6),
-    .verify_fail_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa7),
-    .secure_violation_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa8),
+    .blocked_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa2),
+    .allowed_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa3),
+    .status_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa4),
+    .boot_ok_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa5),
+    .app_ok_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa6),
+    .verify_fail_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa7),
+    .secure_violation_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa8),
     .spi_speed = 16000000,  // 16Mhz
     .orientation = LCD_Rotate180,
 };
@@ -126,7 +126,7 @@ static status_t pinmux_select(const dif_pinmux_t *pinmux, Platform_t pinmap) {
 
   TRY(dif_pinmux_input_select(pinmux, kTopEarlgreyPinmuxPeripheralInGpioGpio8,
                               pinmap.btn_ok.in));
-  //STATUS LEDs.
+  // STATUS LEDs.
   TRY(dif_pinmux_output_select(pinmux, pinmap.allowed_led.out,
                                kTopEarlgreyPinmuxOutselGpioGpio10));
   TRY(dif_pinmux_output_select(pinmux, pinmap.blocked_led.out,
@@ -218,18 +218,17 @@ bool test_main(void) {
   addr = mmio_region_from_addr(TOP_EARLGREY_GPIO_BASE_ADDR);
   dif_gpio_t gpio;
   CHECK_DIF_OK(dif_gpio_init(addr, &gpio));
-  CHECK_DIF_OK(dif_gpio_output_set_enabled_all(&gpio, 0xf));
+  CHECK_DIF_OK(dif_gpio_output_set_enabled_all(&gpio, 0xfc0f));
 
   addr = mmio_region_from_addr(TOP_EARLGREY_AES_BASE_ADDR);
   dif_aes_t aes;
   CHECK_DIF_OK(dif_aes_init(addr, &aes));
   CHECK_DIF_OK(dif_aes_reset(&aes));
 
-  CHECK_STATUS_OK(run_demo(&spi_lcd, &spi_flash, &spid, &i2c, &gpio, &aes,
-                           (display_pin_map_t){0, 1, 2},
-                           (btn_pin_map_t){4, 5, 6, 7, 8},
-                           (status_led_pin_map_t){10,11,12,13,14,15,16},
-                           config->orientation));
+  CHECK_STATUS_OK(run_demo(
+      &spi_lcd, &spi_flash, &spid, &i2c, &gpio, &aes,
+      (display_pin_map_t){0, 1, 2}, (btn_pin_map_t){4, 5, 6, 7, 8},
+      (status_led_pin_map_t){10, 11, 12, 13, 14, 15, 16}, config->orientation));
 
   return true;
 }

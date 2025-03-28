@@ -88,6 +88,11 @@ status_t spi_passthrough_demo(context_t *ctx) {
             lcd_st7735_set_font_colors(ctx->lcd, RGBColorAmber, RGBColorWhite);
             screen_println(ctx->lcd, "Secure Boot", alined_center, 5, true);
             screen_println(ctx->lcd, "disabled!", alined_center, 6, true);
+            TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.verify_fail, 0x0));
+            TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.security_violation,
+                               0x0));
+            TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.blocked, 0x0));
+            TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.allowed, 0x0));
             break;
           case 2:
             loop = false;
@@ -266,6 +271,10 @@ static status_t enable_secure_boot(context_t *ctx) {
     screen_println(ctx->lcd, "Tamper detected!", alined_center, 5, true);
     screen_println(ctx->lcd, "                         ", alined_center, 6,
                    true);
+    TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.verify_fail, 0x1));
+    TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.security_violation, 0x1));
+    TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.blocked, 0x1));
+    TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.allowed, 0x0));
     busy_spin_micros(3000 * 1000);
     TRY(configure_spi_flash_mode(ctx->spid));
     return PERMISSION_DENIED();
@@ -278,5 +287,9 @@ static status_t enable_secure_boot(context_t *ctx) {
   lcd_st7735_set_font_colors(ctx->lcd, RGBColorGreen, RGBColorWhite);
   screen_println(ctx->lcd, "SecureBoot", alined_center, 5, true);
   screen_println(ctx->lcd, "enabled!", alined_center, 6, true);
+  TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.verify_fail, 0x0));
+  TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.security_violation, 0x0));
+  TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.blocked, 0x0));
+  TRY(dif_gpio_write(ctx->gpio, ctx->led_pins.allowed, 0x1));
   return OK_STATUS();
 }

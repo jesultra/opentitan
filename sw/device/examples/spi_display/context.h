@@ -32,7 +32,7 @@ typedef struct status_led_pin_map {
   dif_gpio_pin_t boot_ok;
   dif_gpio_pin_t app_ok;
   dif_gpio_pin_t verify_fail;
-  dif_gpio_pin_t secure_violation;
+  dif_gpio_pin_t security_violation;
 } status_led_pin_map_t;
 
 typedef struct context {
