@@ -9,17 +9,31 @@
 
 #ifndef OPENTITAN_SW_DEVICE_EXAMPLE_SPI_DISPLAY_CONTEXT_H_
 #define OPENTITAN_SW_DEVICE_EXAMPLE_SPI_DISPLAY_CONTEXT_H_
+
 typedef struct display_pin_map {
   dif_gpio_pin_t reset;
   dif_gpio_pin_t dc;
   dif_gpio_pin_t led;
-  dif_gpio_pin_t cs;
-  dif_gpio_pin_t btn_up;
-  dif_gpio_pin_t btn_down;
-  dif_gpio_pin_t btn_left;
-  dif_gpio_pin_t btn_right;
-  dif_gpio_pin_t btn_ok;
+  // dif_gpio_pin_t cs;
 } display_pin_map_t;
+
+typedef struct btn_pin_map {
+  dif_gpio_pin_t up;
+  dif_gpio_pin_t down;
+  dif_gpio_pin_t left;
+  dif_gpio_pin_t right;
+  dif_gpio_pin_t ok;
+} btn_pin_map_t;
+
+typedef struct status_led_pin_map {
+  dif_gpio_pin_t allowed;
+  dif_gpio_pin_t blocked;
+  dif_gpio_pin_t status;
+  dif_gpio_pin_t boot_ok;
+  dif_gpio_pin_t app_ok;
+  dif_gpio_pin_t verify_fail;
+  dif_gpio_pin_t secure_violation;
+} status_led_pin_map_t;
 
 typedef struct context {
   dif_spi_host_t *spi_lcd;
@@ -28,7 +42,9 @@ typedef struct context {
   dif_i2c_t *i2c;
   dif_gpio_t *gpio;
   dif_aes_t *aes;
-  display_pin_map_t pins;
+  display_pin_map_t dsp_pins;
+  btn_pin_map_t btn_pins;
+  status_led_pin_map_t led_pins;
   St7735Context *lcd;
 } context_t;
 

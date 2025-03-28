@@ -14,9 +14,9 @@ enum {
 
 status_t scan_buttons(context_t *ctx, uint32_t timeout) {
   ibex_timeout_t deadline = ibex_timeout_init(timeout * 1000);
-  dif_gpio_pin_t pins[] = {ctx->pins.btn_up, ctx->pins.btn_down,
-                           ctx->pins.btn_left, ctx->pins.btn_right,
-                           ctx->pins.btn_ok};
+  dif_gpio_pin_t pins[] = {ctx->btn_pins.up, ctx->btn_pins.down,
+                           ctx->btn_pins.left, ctx->btn_pins.right,
+                           ctx->btn_pins.ok};
   static size_t i = 0;
   do {
     i = (i + 1) % ARRAYSIZE(pins);

@@ -28,12 +28,20 @@ typedef struct Platform {
   pinmux_testutils_mio_dict_t i2c_clk;
   pinmux_testutils_mio_dict_t reset;
   pinmux_testutils_mio_dict_t dc;
-  pinmux_testutils_mio_dict_t led;
+  pinmux_testutils_mio_dict_t dsp_led;
   pinmux_testutils_mio_dict_t btn_up;
   pinmux_testutils_mio_dict_t btn_down;
   pinmux_testutils_mio_dict_t btn_left;
   pinmux_testutils_mio_dict_t btn_right;
   pinmux_testutils_mio_dict_t btn_ok;
+  // Status LEDs
+  pinmux_testutils_mio_dict_t allowed_led;
+  pinmux_testutils_mio_dict_t blocked_led;
+  pinmux_testutils_mio_dict_t status_led;
+  pinmux_testutils_mio_dict_t boot_ok_led;
+  pinmux_testutils_mio_dict_t app_ok_led;
+  pinmux_testutils_mio_dict_t verify_fail_led;
+  pinmux_testutils_mio_dict_t secure_violation_led;
   size_t spi_speed;
   LCD_Orientation orientation;
 } Platform_t;
@@ -44,7 +52,7 @@ static const Platform_t kCw340Board = {
     .clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob1),
     .reset = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob4),
     .dc = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob2),
-    .led = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob3),
+    .dsp_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob3),
     .spi_speed = 3000000,  // 3Mhz
     .orientation = LCD_Rotate0,
 };
@@ -57,12 +65,19 @@ static const Platform_t kVoyager1Board = {
     .i2c_clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob4),
     .reset = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc7),
     .dc = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc9),
-    .led = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob0),
+    .dsp_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob0),
     .btn_up = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc12),
     .btn_down = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc10),
     .btn_right = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc11),
     .btn_left = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior10),
     .btn_ok = PINMUX_TESTUTILS_NEW_MIO_DICT(Ior11),
+    .allowed_led = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa2),
+    .blocked_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa3),
+    .status_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa4),
+    .boot_ok_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa5),
+    .app_ok_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa6),
+    .verify_fail_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa7),
+    .secure_violation_led= PINMUX_TESTUTILS_NEW_MIO_DICT(Ioa8),
     .spi_speed = 16000000,  // 16Mhz
     .orientation = LCD_Rotate180,
 };
@@ -93,8 +108,8 @@ static status_t pinmux_select(const dif_pinmux_t *pinmux, Platform_t pinmap) {
   // A0/DC.
   TRY(dif_pinmux_output_select(pinmux, pinmap.dc.out,
                                kTopEarlgreyPinmuxOutselGpioGpio1));
-  // LED.
-  TRY(dif_pinmux_output_select(pinmux, pinmap.led.out,
+  // BACKLIGHT LED.
+  TRY(dif_pinmux_output_select(pinmux, pinmap.dsp_led.out,
                                kTopEarlgreyPinmuxOutselGpioGpio2));
 
   TRY(dif_pinmux_input_select(pinmux, kTopEarlgreyPinmuxPeripheralInGpioGpio4,
@@ -111,6 +126,21 @@ static status_t pinmux_select(const dif_pinmux_t *pinmux, Platform_t pinmap) {
 
   TRY(dif_pinmux_input_select(pinmux, kTopEarlgreyPinmuxPeripheralInGpioGpio8,
                               pinmap.btn_ok.in));
+  //STATUS LEDs.
+  TRY(dif_pinmux_output_select(pinmux, pinmap.allowed_led.out,
+                               kTopEarlgreyPinmuxOutselGpioGpio10));
+  TRY(dif_pinmux_output_select(pinmux, pinmap.blocked_led.out,
+                               kTopEarlgreyPinmuxOutselGpioGpio11));
+  TRY(dif_pinmux_output_select(pinmux, pinmap.status_led.out,
+                               kTopEarlgreyPinmuxOutselGpioGpio12));
+  TRY(dif_pinmux_output_select(pinmux, pinmap.boot_ok_led.out,
+                               kTopEarlgreyPinmuxOutselGpioGpio13));
+  TRY(dif_pinmux_output_select(pinmux, pinmap.app_ok_led.out,
+                               kTopEarlgreyPinmuxOutselGpioGpio14));
+  TRY(dif_pinmux_output_select(pinmux, pinmap.verify_fail_led.out,
+                               kTopEarlgreyPinmuxOutselGpioGpio15));
+  TRY(dif_pinmux_output_select(pinmux, pinmap.secure_violation_led.out,
+                               kTopEarlgreyPinmuxOutselGpioGpio16));
 
   if (kDeviceType == kDeviceSilicon) {
     dif_pinmux_pad_attr_t out_attr;
@@ -196,7 +226,9 @@ bool test_main(void) {
   CHECK_DIF_OK(dif_aes_reset(&aes));
 
   CHECK_STATUS_OK(run_demo(&spi_lcd, &spi_flash, &spid, &i2c, &gpio, &aes,
-                           (display_pin_map_t){0, 1, 2, 11, 4, 5, 6, 7, 8},
+                           (display_pin_map_t){0, 1, 2},
+                           (btn_pin_map_t){4, 5, 6, 7, 8},
+                           (status_led_pin_map_t){10,11,12,13,14,15,16},
                            config->orientation));
 
   return true;

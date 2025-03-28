@@ -13,7 +13,10 @@
 
 status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
                   dif_spi_device_handle_t *spid, dif_i2c_t *i2c,
-                  dif_gpio_t *gpio, dif_aes_t *aes, display_pin_map_t pins,
+                  dif_gpio_t *gpio, dif_aes_t *aes,
+                  display_pin_map_t dsp_pins,
+                  btn_pin_map_t btn_pins,
+                  status_led_pin_map_t led_pins,
                   LCD_Orientation orientation);
 
 status_t self_test(context_t *ctx);

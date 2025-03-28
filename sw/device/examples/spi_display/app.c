@@ -27,22 +27,24 @@ static status_t credits(context_t *ctx);
 
 status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
                   dif_spi_device_handle_t *spid, dif_i2c_t *i2c,
-                  dif_gpio_t *gpio, dif_aes_t *aes, display_pin_map_t pins,
+                  dif_gpio_t *gpio, dif_aes_t *aes, display_pin_map_t dsp_pins,
+                  btn_pin_map_t btn_pins,
+                  status_led_pin_map_t led_pins,
                   LCD_Orientation orientation) {
   LOG_INFO("%s: Initializing pins", __func__);
   // Set the initial state of the LCD control pins.
-  TRY(dif_gpio_write(gpio, pins.dc, 0x0));
-  TRY(dif_gpio_write(gpio, pins.led, 0x1));
+  TRY(dif_gpio_write(gpio, dsp_pins.dc, 0x0));
+  TRY(dif_gpio_write(gpio, dsp_pins.led, 0x1));
 
   // Reset LCD.
   LOG_INFO("%s: Reseting display", __func__);
-  TRY(dif_gpio_write(gpio, pins.reset, 0x0));
+  TRY(dif_gpio_write(gpio, dsp_pins.reset, 0x0));
   timer_delay(150);
-  TRY(dif_gpio_write(gpio, pins.reset, 0x1));
+  TRY(dif_gpio_write(gpio, dsp_pins.reset, 0x1));
 
   // Init LCD driver and set the SPI driver.
   St7735Context lcd;
-  context_t ctx = {spi_lcd, spi_flash, spid, i2c, gpio, aes, pins, &lcd};
+  context_t ctx = {spi_lcd, spi_flash, spid, i2c, gpio, aes, dsp_pins, btn_pins, led_pins, &lcd};
   LCD_Interface interface = {
       .handle = &ctx,              // SPI handle.
       .spi_write = spi_write,      // SPI write callback.
@@ -290,8 +292,8 @@ static uint32_t spi_write(void *handle, uint8_t *data, size_t len) {
 
 static uint32_t gpio_write(void *handle, bool cs, bool dc) {
   context_t *ctx = (context_t *)handle;
-  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->pins.cs, cs));
-  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->pins.dc, dc));
+  // CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.cs, cs));
+  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.dc, dc));
   return 0;
 }
 
