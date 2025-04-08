@@ -17,6 +17,9 @@
 #include "sw/device/lib/runtime/print.h"
 #include "sw/device/lib/testing/test_framework/check.h"
 
+size_t lcd_height;
+size_t lcd_width;
+
 // Local functions declaration.
 static uint32_t spi_transfer(void *handle, uint8_t *data, size_t len);
 static uint32_t gpio_write(void *handle, bool cs, bool dc);
@@ -33,7 +36,8 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   LOG_INFO("%s: Initializing pins", __func__);
   // Set the initial state of the LCD control pins.
   TRY(dif_gpio_write(gpio, dsp_pins.dc, 0x0));
-  TRY(dif_gpio_write(gpio, dsp_pins.led, 0x1));
+  TRY(dif_gpio_write(gpio, dsp_pins.led, 0x0));
+
 
   // Reset LCD.
   LOG_INFO("%s: Reseting display", __func__);
@@ -58,25 +62,34 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 
   // Set the LCD orientation.
   lcd_st7735_set_orientation(&lcd, orientation);
+ lcd_st7735_get_resolution(&lcd, &lcd_height, &lcd_width);
 
   // Setup text font bitmaps to be used and the colors.
   lcd_st7735_set_font(&lcd, &lucidaConsole_10ptFont);
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
+  size_t font_h = lcd.parent.font->height;
 
   LOG_INFO("%s: Clearing...", __func__);
   // Clean display with a white rectangle.
   lcd_st7735_clean(&lcd);
+  TRY(dif_gpio_write(gpio, dsp_pins.led, 0x1));
 
   LOG_INFO("%s: Ot logo...", __func__);
-  screen_println(&lcd, "Opentitan", alined_center, 7, true);
-  screen_println(&lcd, "Boot successful!", alined_center, 8, true);
+  screen_println(&lcd, "Opentitan", alined_center, 6, true);
+  screen_println(&lcd, "Boot successful!", alined_center, 7, true);
+
+  lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorGrey);
+  lcd_st7735_puts(&lcd, (LCD_Point){.x = 30, .y = lcd_height - font_h},
+      "Demo v0.1");
+  lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
+
   TRY(dif_gpio_write(gpio, led_pins.boot_ok, 0x1));
   TRY(dif_gpio_write(gpio, led_pins.app_ok, 0x1));
   timer_delay(1500);
   // Draw the splash screen with a RGB 565 bitmap and text in the bottom.
   lcd_st7735_draw_rgb565(
       &lcd,
-      (LCD_rectangle){.origin = {.x = 0, .y = 20}, .width = 160, .height = 39},
+      (LCD_rectangle){.origin = {.x = 0, .y = 20}, .width = lcd_width, .height = 39},
       (uint8_t *)logo_opentitan_160_39);
   timer_delay(1500);
 
@@ -111,7 +124,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
     if (ibex_timeout_check(&counter_timer)) {
       char buffer[3] = {0, 0, 0};
       base_snprintf(buffer, sizeof(buffer), "%u", --idle_count_down);
-      lcd_st7735_puts(ctx.lcd, (LCD_Point){.x = 160 - 8, .y = 126 - 10},
+      lcd_st7735_puts(ctx.lcd, (LCD_Point){.x = lcd_width - 8, .y = lcd_height - font_h},
                       buffer);
       counter_timer = ibex_timeout_init(kTimer1Second);
     }
@@ -207,7 +220,7 @@ static status_t credits(context_t *ctx) {
               ctx->lcd,
               (LCD_rectangle){.origin = {.x = rendable.u.ot_image.posx,
                                          .y = rendable.u.ot_image.posy},
-                              .width = 160,
+                              .width = lcd_width,
                               .height = 39},
               (uint8_t *)logo_opentitan_160_39);
           break;
@@ -229,7 +242,7 @@ static status_t credits(context_t *ctx) {
   } else {
     lcd_st7735_draw_rgb565(
         ctx->lcd,
-        (LCD_rectangle){.origin = {.x = 0, .y = 0}, .width = 160, .height = 39},
+        (LCD_rectangle){.origin = {.x = 0, .y = 0}, .width = lcd_width, .height = 39},
         (uint8_t *)logo_opentitan_160_39);
 
     size_t row = 3;
