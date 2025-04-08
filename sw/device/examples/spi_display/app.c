@@ -42,7 +42,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   // Reset LCD.
   LOG_INFO("%s: Reseting display", __func__);
   TRY(dif_gpio_write(gpio, dsp_pins.reset, 0x0));
-  timer_delay(150);
+  busy_spin_micros(150 * 1000);
   TRY(dif_gpio_write(gpio, dsp_pins.reset, 0x1));
 
   // Init LCD driver and set the SPI driver.
@@ -85,13 +85,12 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 
   TRY(dif_gpio_write(gpio, led_pins.boot_ok, 0x1));
   TRY(dif_gpio_write(gpio, led_pins.app_ok, 0x1));
-  timer_delay(1500);
   // Draw the splash screen with a RGB 565 bitmap and text in the bottom.
   lcd_st7735_draw_rgb565(
       &lcd,
       (LCD_rectangle){.origin = {.x = 0, .y = 20}, .width = lcd_width, .height = 39},
       (uint8_t *)logo_opentitan_160_39);
-  timer_delay(1500);
+  busy_spin_micros(2500 * 1000);
 
   LOG_INFO("%s: Starting menu.", __func__);
   // Show the main menu.
@@ -147,7 +146,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
     if (check_secret_menu((btn_t)UNWRAP(ret))) {
       main_menu.items_count++;
       screen_show_menu(&lcd, &main_menu, (size_t)selected);
-      timer_delay(1000);
+      busy_spin_micros(1000 * 1000);
       continue;
     }
 
@@ -198,7 +197,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 static status_t aes_demo(context_t *ctx) {
   while (1) {
     TRY(run_aes(ctx));
-    timer_delay(5000);
+    busy_spin_micros(5000 * 1000);
   }
 
   return OK_STATUS();
@@ -315,4 +314,4 @@ static uint32_t gpio_write(void *handle, bool cs, bool dc) {
   return 0;
 }
 
-static void timer_delay(uint32_t ms) { busy_spin_micros(ms * 1000); }
+static void timer_delay(uint32_t ms) { busy_spin_micros(ms * 100); }
