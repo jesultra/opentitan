@@ -18,7 +18,7 @@
 #include "sw/device/lib/testing/test_framework/check.h"
 
 // Local functions declaration.
-static uint32_t spi_write(void *handle, uint8_t *data, size_t len);
+static uint32_t spi_transfer(void *handle, uint8_t *data, size_t len);
 static uint32_t gpio_write(void *handle, bool cs, bool dc);
 static void timer_delay(uint32_t ms);
 static status_t aes_demo(context_t *ctx);
@@ -47,9 +47,11 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
                    aes,     dsp_pins,  btn_pins, led_pins, &lcd};
   LCD_Interface interface = {
       .handle = &ctx,              // SPI handle.
-      .spi_write = spi_write,      // SPI write callback.
+      .spi_transfer = spi_transfer,      // SPI write callback.
       .gpio_write = gpio_write,    // GPIO write callback.
       .timer_delay = timer_delay,  // Timer delay callback.
+      .reset = NULL,
+      .set_backlight_pwm = NULL
   };
   LOG_INFO("%s: Initializing display", __func__);
   lcd_st7735_init(&lcd, &interface);
@@ -269,7 +271,7 @@ static bool check_secret_menu(btn_t btn) {
   return false;
 }
 
-static uint32_t spi_write(void *handle, uint8_t *data, size_t len) {
+static uint32_t spi_transfer(void *handle, uint8_t *data, size_t len) {
   context_t *ctx = (context_t *)handle;
   const uint32_t data_sent = len;
 

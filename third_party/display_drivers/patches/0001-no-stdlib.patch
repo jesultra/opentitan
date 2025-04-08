@@ -1,0 +1,11 @@
+diff -u -r a/src/st7735/lcd_st7735.c b/src/st7735/lcd_st7735.c
+--- a/src/st7735/lcd_st7735.c	2026-07-03 18:23:49.867416856 +0200
++++ b/src/st7735/lcd_st7735.c	2026-07-03 18:24:11.737327975 +0200
+@@ -5,7 +5,6 @@
+ #include "lcd_st7735.h"
+ 
+ #include <stdint.h>
+-#include <stdlib.h>
+ 
+ #include "lcd_st7735_cmds.h"
+ #include "lcd_st7735_init.h"
