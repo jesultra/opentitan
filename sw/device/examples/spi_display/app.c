@@ -221,7 +221,6 @@ static status_t credits(context_t *ctx) {
                           (LCD_Point){.x = rendable.u.collored_text.posx,
                                       .y = rendable.u.collored_text.posy},
                           (char *)rendable.u.collored_text.string);
-          lcd_st7735_set_font_colors(ctx->lcd, RGBColorWhite, RGBColorBlue);
           break;
       }
     }
@@ -239,6 +238,7 @@ static status_t credits(context_t *ctx) {
     screen_println(ctx->lcd, "www.opentitan.org", alined_center, row++, false);
   }
 
+  lcd_st7735_set_font_colors(ctx->lcd, RGBColorWhite, RGBColorGrey);
   lcd_st7735_puts(ctx->lcd, (LCD_Point){.x = 0, .y = 126 - 10},
                   "(Move stick to exit)");
 
@@ -246,6 +246,7 @@ static status_t credits(context_t *ctx) {
     ;
 
   lcd_st7735_clean(ctx->lcd);
+  lcd_st7735_set_font_colors(ctx->lcd, RGBColorWhite, RGBColorBlue);
   return OK_STATUS();
 }
 

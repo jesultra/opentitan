@@ -17,6 +17,7 @@ enum {
   RGBColorRed = 0xFF0000,
   RGBColorAmber = 0xFFBF00,
   RGBColorWhite = 0xFFFFFF,
+  RGBColorGrey = 0xBBBCBB,
 };
 
 // Text alignment.
