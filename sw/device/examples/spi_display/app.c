@@ -90,7 +90,8 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
       (LCD_rectangle){.origin = {.x = 0, .y = 20}, .width = lcd_width, .height = 39},
       (uint8_t *)logo_opentitan_160_39);
   busy_spin_micros(2500 * 1000);
-
+      (LCD_rectangle){
+          .origin = {.x = 0, .y = 20}, .width = lcd_width, .height = 39},
   LOG_INFO("%s: Starting menu.", __func__);
   // Show the main menu.
   const char *items[] = {
