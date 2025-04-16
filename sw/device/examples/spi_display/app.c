@@ -316,6 +316,7 @@ static uint32_t gpio_write(void *handle, bool cs, bool dc) {
   context_t *ctx = (context_t *)handle;
   // CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.cs, cs));
   return 0;
+  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.cs, cs));
 }
 
 static void timer_delay(uint32_t ms) { busy_spin_micros(ms * 100); }
