@@ -317,3 +317,4 @@ static uint32_t gpio_write(void *handle, bool cs, bool dc) {
 }
 
 static void timer_delay(uint32_t ms) { busy_spin_micros(ms * 100); }
+
