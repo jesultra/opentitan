@@ -39,7 +39,6 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   TRY(dif_gpio_write(gpio, dsp_pins.led, 0x0));
 
 
-  // Reset LCD.
   LOG_INFO("%s: Reseting display", __func__);
   TRY(dif_gpio_write(gpio, dsp_pins.reset, 0x0));
   busy_spin_micros(150 * 1000);
