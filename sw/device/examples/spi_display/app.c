@@ -21,7 +21,8 @@ size_t lcd_height;
 size_t lcd_width;
 
 // Local functions declaration.
-static uint32_t spi_transfer(void *handle, uint8_t *data, size_t len);
+static uint32_t spi_write(void *handle, uint8_t *data, size_t len);
+static uint32_t spi_read(void *handle, uint8_t *data, size_t len);
 static uint32_t gpio_write(void *handle, bool cs, bool dc);
 static void timer_delay(uint32_t ms);
 static status_t aes_demo(context_t *ctx);
