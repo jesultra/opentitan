@@ -266,6 +266,7 @@ static status_t credits(context_t *ctx) {
 
   lcd_st7735_clean(ctx->lcd);
   lcd_st7735_set_font_colors(ctx->lcd, RGBColorWhite, RGBColorBlue);
+  lcd_st7735_set_font(ctx->lcd, &lucidaConsole_10ptFont);
   return OK_STATUS();
 }
 
