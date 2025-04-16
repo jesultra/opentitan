@@ -227,7 +227,7 @@ bool test_main(void) {
 
   CHECK_STATUS_OK(run_demo(
       &spi_lcd, &spi_flash, &spid, &i2c, &gpio, &aes,
-      (display_pin_map_t){0, 1, 2}, (btn_pin_map_t){4, 5, 6, 7, 8},
+      (display_pin_map_t){0, 1, 2, 3}, (btn_pin_map_t){4, 5, 6, 7, 8},
       (status_led_pin_map_t){10, 11, 12, 13, 14, 15, 16}, config->orientation));
 
   return true;
