@@ -218,7 +218,7 @@ bool test_main(void) {
   addr = mmio_region_from_addr(TOP_EARLGREY_GPIO_BASE_ADDR);
   dif_gpio_t gpio;
   CHECK_DIF_OK(dif_gpio_init(addr, &gpio));
-  CHECK_DIF_OK(dif_gpio_output_set_enabled_all(&gpio, 0xfc0f));
+  CHECK_DIF_OK(dif_gpio_output_set_enabled_all(&gpio, 0x0fc0f));
 
   addr = mmio_region_from_addr(TOP_EARLGREY_AES_BASE_ADDR);
   dif_aes_t aes;
