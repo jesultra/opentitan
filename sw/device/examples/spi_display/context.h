@@ -14,7 +14,7 @@ typedef struct display_pin_map {
   dif_gpio_pin_t reset;
   dif_gpio_pin_t dc;
   dif_gpio_pin_t led;
-  // dif_gpio_pin_t cs;
+  dif_gpio_pin_t cs;
 } display_pin_map_t;
 
 typedef struct btn_pin_map {
