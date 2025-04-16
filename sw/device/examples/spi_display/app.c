@@ -245,7 +245,8 @@ static status_t credits(context_t *ctx) {
         (LCD_rectangle){.origin = {.x = 0, .y = 0}, .width = lcd_width, .height = 39},
         (uint8_t *)logo_opentitan_160_39);
 
-    size_t row = 3;
+        (LCD_rectangle){
+            .origin = {.x = 0, .y = 0}, .width = lcd_width, .height = 39},
     screen_println(ctx->lcd, "the first opensource", alined_center, row++,
                    false);
     screen_println(ctx->lcd, "Root of Trust ", alined_center, row++, false);
