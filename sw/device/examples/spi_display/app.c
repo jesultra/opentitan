@@ -315,7 +315,6 @@ static uint32_t spi_write(void *handle, uint8_t *data, size_t len) {
 static uint32_t gpio_write(void *handle, bool cs, bool dc) {
   context_t *ctx = (context_t *)handle;
   // CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.cs, cs));
-  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.dc, dc));
   return 0;
 }
 
