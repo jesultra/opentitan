@@ -50,10 +50,11 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   context_t ctx = {spi_lcd, spi_flash, spid,     i2c,      gpio,
                    aes,     dsp_pins,  btn_pins, led_pins, &lcd};
   LCD_Interface interface = {
-      .handle = &ctx,              // SPI handle.
-      .spi_transfer = spi_transfer,      // SPI write callback.
-      .gpio_write = gpio_write,    // GPIO write callback.
-      .timer_delay = timer_delay,  // Timer delay callback.
+      .handle = &ctx,                // SPI handle.
+      .spi_write = spi_write,  // SPI write callback.
+      .spi_read = spi_read,  // SPI write callback.
+      .gpio_write = gpio_write,      // GPIO write callback.
+      .timer_delay = timer_delay,    // Timer delay callback.
       .reset = NULL,
       .set_backlight_pwm = NULL
   };
