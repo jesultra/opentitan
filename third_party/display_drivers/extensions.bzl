@@ -11,14 +11,7 @@ display_drivers = module_extension(
 def _display_drivers_repos():
     http_archive(
         name = "display_drivers",
-        build_file = Label("//third_party/display_drivers:BUILD.display_drivers.bazel"),
-        sha256 = "8dc986c010757847d3189cd3635396de6098f8aeb78f5f80ac92177e6bc9c8ff",
-        strip_prefix = "display_drivers-rc0.2.0",
-        urls = [
-            "https://github.com/engdoreis/display_drivers/archive/refs/tags/rc0.2.0.tar.gz",
-        ],
-        patches = [
-            Label("//third_party/display_drivers/patches:0001-no-stdlib.patch"),
-        ],
-        patch_args = ["-p1"],
+        remote = "https://github.com/engdoreis/display_drivers.git",
+        branch = "develop",
+        build_file = "//third_party/display_drivers:BUILD.display_drivers.bazel",
     )
