@@ -82,7 +82,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
       "Demo v0.1");
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
 
-  TRY(dif_gpio_write(gpio, led_pins.boot_ok, 0x1));
+                  "Demo v0.1");
   TRY(dif_gpio_write(gpio, led_pins.app_ok, 0x1));
   // Draw the splash screen with a RGB 565 bitmap and text in the bottom.
   lcd_st7735_draw_rgb565(
