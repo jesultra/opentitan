@@ -64,7 +64,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
  lcd_st7735_get_resolution(&lcd, &lcd_height, &lcd_width);
 
   // Setup text font bitmaps to be used and the colors.
-  lcd_st7735_set_font(&lcd, &lucidaConsole_10ptFont);
+  lcd_st7735_get_resolution(&lcd, &lcd_height, &lcd_width);
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
   size_t font_h = lcd.parent.font->height;
 
