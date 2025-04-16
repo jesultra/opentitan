@@ -126,7 +126,8 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
       lcd_st7735_puts(ctx.lcd, (LCD_Point){.x = lcd_width - 8, .y = lcd_height - font_h},
                       buffer);
       counter_timer = ibex_timeout_init(kTimer1Second);
-    }
+      lcd_st7735_puts(ctx.lcd,
+                      (LCD_Point){.x = lcd_width - 8, .y = lcd_height - font_h},
 
     status_t ret = scan_buttons(&ctx, 1000);
 
