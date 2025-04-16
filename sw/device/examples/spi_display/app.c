@@ -56,8 +56,9 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
       .gpio_write = gpio_write,      // GPIO write callback.
       .timer_delay = timer_delay,    // Timer delay callback.
       .reset = NULL,
-      .set_backlight_pwm = NULL
-  };
+      .set_backlight_pwm = NULL};
+
+
   LOG_INFO("%s: Initializing display", __func__);
   lcd_st7735_init(&lcd, &interface);
 
