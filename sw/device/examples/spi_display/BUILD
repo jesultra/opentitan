@@ -63,7 +63,7 @@ cc_library(
         "i2c_eeprom.h",
     ],
     deps = [
-        ":spi_display_lib",
+        ":opentitan_libs",
         "//sw/device/examples/spi_display/images:logo_lowrisc_05_80px",
         "//sw/device/examples/spi_display/images:logo_opentitan_160_39px",
         "//sw/device/examples/spi_display/images:logo_tux_80_95px",
@@ -74,7 +74,7 @@ cc_library(
 )
 
 cc_library(
-    name = "spi_display_lib",
+    name = "opentitan_libs",
     deps = [
         "//hw/top_earlgrey/sw/autogen:top_earlgrey",
         "//sw/device/examples:demos",
@@ -103,20 +103,3 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "spi_display_driver_lib",
-    srcs = [
-        "display_drivers/core/lcd_base.c",
-        "display_drivers/core/lucida_console_10pt.c",
-        "display_drivers/st7735/lcd_st7735.c",
-    ],
-    hdrs = [
-        "display_drivers/core/font.h",
-        "display_drivers/core/lcd_base.h",
-        "display_drivers/core/lucida_console_10pt.h",
-        "display_drivers/core/lucida_console_12pt.h",
-        "display_drivers/st7735/lcd_st7735.h",
-        "display_drivers/st7735/lcd_st7735_cmds.h",
-        "display_drivers/st7735/lcd_st7735_init.h",
-    ],
-)

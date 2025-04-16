@@ -23,6 +23,7 @@ OTTF_DEFINE_TEST_CONFIG();
 typedef struct Platform {
   pinmux_testutils_mio_dict_t csb;
   pinmux_testutils_mio_dict_t sd0;
+  pinmux_testutils_mio_dict_t sd1;
   pinmux_testutils_mio_dict_t clk;
   pinmux_testutils_mio_dict_t i2c_sda;
   pinmux_testutils_mio_dict_t i2c_clk;
@@ -60,6 +61,7 @@ static const Platform_t kCw340Board = {
 static const Platform_t kVoyager1Board = {
     .csb = PINMUX_TESTUTILS_NEW_MIO_DICT(Ioc6),
     .sd0 = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob1),
+    .sd1 = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob1),
     .clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob2),
     .i2c_sda = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob3),
     .i2c_clk = PINMUX_TESTUTILS_NEW_MIO_DICT(Iob4),
@@ -85,9 +87,11 @@ static const Platform_t kVoyager1Board = {
 static status_t pinmux_select(const dif_pinmux_t *pinmux, Platform_t pinmap) {
   // SPI.
   TRY(dif_pinmux_output_select(pinmux, pinmap.csb.out,
-                               kTopEarlgreyPinmuxOutselSpiHost1Csb));
+                               kTopEarlgreyPinmuxOutselGpioGpio3));
   TRY(dif_pinmux_output_select(pinmux, pinmap.sd0.out,
                                kTopEarlgreyPinmuxOutselSpiHost1Sd0));
+  TRY(dif_pinmux_input_select(pinmux, kTopEarlgreyPinmuxPeripheralInSpiHost1Sd1,
+                              pinmap.sd1.in));
   TRY(dif_pinmux_output_select(pinmux, pinmap.clk.out,
                                kTopEarlgreyPinmuxOutselSpiHost1Sck));
 
@@ -152,8 +156,9 @@ static status_t pinmux_select(const dif_pinmux_t *pinmux, Platform_t pinmap) {
 
     TRY(dif_pinmux_pad_write_attrs(pinmux, pinmap.clk.pad, kDifPinmuxPadKindMio,
                                    in_attr, &out_attr));
-    TRY(dif_pinmux_pad_write_attrs(pinmux, pinmap.sd0.pad, kDifPinmuxPadKindMio,
-                                   in_attr, &out_attr));
+    // TRY(dif_pinmux_pad_write_attrs(pinmux, pinmap.sd0.pad,
+    // kDifPinmuxPadKindMio,
+    //                                in_attr, &out_attr));
     TRY(dif_pinmux_pad_write_attrs(pinmux, pinmap.csb.pad, kDifPinmuxPadKindMio,
                                    in_attr, &out_attr));
   }
@@ -194,7 +199,7 @@ bool test_main(void) {
   CHECK_DIF_OK(dif_spi_host_configure(
                    &spi_lcd,
                    (dif_spi_host_config_t){
-                       .spi_clock = config->spi_speed,
+                       .spi_clock = config->spi_speed / 2,
                        .peripheral_clock_freq_hz = (uint32_t)kClockFreqUsbHz,
                    }),
                "SPI_HOST 1 config failed!");

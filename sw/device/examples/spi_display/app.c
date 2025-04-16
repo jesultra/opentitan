@@ -24,7 +24,7 @@ size_t lcd_width;
 static uint32_t spi_write(void *handle, uint8_t *data, size_t len);
 static uint32_t spi_read(void *handle, uint8_t *data, size_t len);
 static uint32_t gpio_write(void *handle, bool cs, bool dc);
-static void timer_delay(uint32_t ms);
+static void timer_delay(void *handle, uint32_t ms);
 static status_t aes_demo(context_t *ctx);
 static bool check_secret_menu(btn_t btn);
 static status_t credits(context_t *ctx);
@@ -39,7 +39,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   TRY(dif_gpio_write(gpio, dsp_pins.dc, 0x0));
   TRY(dif_gpio_write(gpio, dsp_pins.led, 0x0));
 
-
+  // Reset LCD.
   LOG_INFO("%s: Reseting display", __func__);
   TRY(dif_gpio_write(gpio, dsp_pins.reset, 0x0));
   busy_spin_micros(150 * 1000);
@@ -50,24 +50,37 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
   context_t ctx = {spi_lcd, spi_flash, spid,     i2c,      gpio,
                    aes,     dsp_pins,  btn_pins, led_pins, &lcd};
   LCD_Interface interface = {
-      .handle = &ctx,                // SPI handle.
-      .spi_write = spi_write,  // SPI write callback.
-      .spi_read = spi_read,  // SPI write callback.
-      .gpio_write = gpio_write,      // GPIO write callback.
-      .timer_delay = timer_delay,    // Timer delay callback.
+      .handle = &ctx,              // SPI handle.
+      .spi_write = spi_write,      // SPI write callback.
+      .spi_read = spi_read,        // SPI write callback.
+      .gpio_write = gpio_write,    // GPIO write callback.
+      .timer_delay = timer_delay,  // Timer delay callback.
       .reset = NULL,
       .set_backlight_pwm = NULL};
-
 
   LOG_INFO("%s: Initializing display", __func__);
   lcd_st7735_init(&lcd, &interface);
 
+  size_t w = 0, h = 0;
+  Result res = lcd_st7735_check_frame_buffer_resolution(&lcd, &w, &h);
+  if (res.code != 0) {
+    LOG_INFO(
+        "Warning: Unable to determine LCD offset. Try slower SPI clock.\r\n");
+  } else if (w != 160) {
+    LOG_INFO("Offset needed");
+    lcd_st7735_set_frame_buffer_resolution(&lcd, w, h);
+  } else {
+    LOG_INFO("No offset needed");
+  }
+
+  lcd_st7735_startup(&lcd);
+
   // Set the LCD orientation.
   lcd_st7735_set_orientation(&lcd, orientation);
- lcd_st7735_get_resolution(&lcd, &lcd_height, &lcd_width);
+  lcd_st7735_get_resolution(&lcd, &lcd_height, &lcd_width);
 
   // Setup text font bitmaps to be used and the colors.
-  lcd_st7735_get_resolution(&lcd, &lcd_height, &lcd_width);
+  lcd_st7735_set_font(&lcd, &lucidaConsole_10ptFont);
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
   size_t font_h = lcd.parent.font->height;
 
@@ -82,19 +95,19 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorGrey);
   lcd_st7735_puts(&lcd, (LCD_Point){.x = 30, .y = lcd_height - font_h},
-      "Demo v0.1");
+                  "Demo v0.1.0");
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
 
-                  "Demo v0.1");
+  TRY(dif_gpio_write(gpio, led_pins.boot_ok, 0x1));
   TRY(dif_gpio_write(gpio, led_pins.app_ok, 0x1));
   // Draw the splash screen with a RGB 565 bitmap and text in the bottom.
   lcd_st7735_draw_rgb565(
       &lcd,
-      (LCD_rectangle){.origin = {.x = 0, .y = 20}, .width = lcd_width, .height = 39},
-      (uint8_t *)logo_opentitan_160_39);
-  busy_spin_micros(2500 * 1000);
       (LCD_rectangle){
           .origin = {.x = 0, .y = 20}, .width = lcd_width, .height = 39},
+      (uint8_t *)logo_opentitan_160_39);
+  busy_spin_micros(2500 * 1000);
+
   LOG_INFO("%s: Starting menu.", __func__);
   // Show the main menu.
   const char *items[] = {
@@ -126,11 +139,11 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
     if (ibex_timeout_check(&counter_timer)) {
       char buffer[3] = {0, 0, 0};
       base_snprintf(buffer, sizeof(buffer), "%u", --idle_count_down);
-      lcd_st7735_puts(ctx.lcd, (LCD_Point){.x = lcd_width - 8, .y = lcd_height - font_h},
-                      buffer);
-      counter_timer = ibex_timeout_init(kTimer1Second);
       lcd_st7735_puts(ctx.lcd,
                       (LCD_Point){.x = lcd_width - 8, .y = lcd_height - font_h},
+                      buffer);
+      counter_timer = ibex_timeout_init(kTimer1Second);
+    }
 
     status_t ret = scan_buttons(&ctx, 1000);
 
@@ -212,6 +225,7 @@ static status_t credits(context_t *ctx) {
   ibex_timeout_t timeout = ibex_timeout_init(kTimeoutMillis);
 
   lcd_st7735_clean(ctx->lcd);
+  // lcd_st7735_set_font(ctx->lcd, &m5x7_16ptFont);
 
   EepromReader reader;
   Rendable rendable;
@@ -245,11 +259,11 @@ static status_t credits(context_t *ctx) {
   } else {
     lcd_st7735_draw_rgb565(
         ctx->lcd,
-        (LCD_rectangle){.origin = {.x = 0, .y = 0}, .width = lcd_width, .height = 39},
-        (uint8_t *)logo_opentitan_160_39);
-
         (LCD_rectangle){
             .origin = {.x = 0, .y = 0}, .width = lcd_width, .height = 39},
+        (uint8_t *)logo_opentitan_160_39);
+
+    size_t row = 3;
     screen_println(ctx->lcd, "the first opensource", alined_center, row++,
                    false);
     screen_println(ctx->lcd, "Root of Trust ", alined_center, row++, false);
@@ -289,8 +303,8 @@ static bool check_secret_menu(btn_t btn) {
   return false;
 }
 
-static uint32_t spi_transfer(void *handle, uint8_t *data, size_t len) {
 static uint32_t spi_write(void *handle, uint8_t *data, size_t len) {
+  context_t *ctx = (context_t *)handle;
   const uint32_t data_sent = len;
 
   dif_spi_host_segment_t transaction = {.type = kDifSpiHostSegmentTypeTx,
@@ -313,12 +327,46 @@ static uint32_t spi_write(void *handle, uint8_t *data, size_t len) {
   return data_sent;
 }
 
-static uint32_t gpio_write(void *handle, bool cs, bool dc) {
+static uint32_t spi_read(void *handle, uint8_t *data, size_t len) {
   context_t *ctx = (context_t *)handle;
-  // CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.cs, cs));
-  return 0;
-  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.cs, cs));
+  const uint32_t data_read = len;
+
+  dif_spi_host_segment_t transaction[] = {
+      // {.type = kDifSpiHostSegmentTypeDummy,
+      //  .dummy =
+      //      {
+      //          .width = kDifSpiHostWidthStandard,
+      //          .length = 1,
+      //      }},
+      {.type = kDifSpiHostSegmentTypeRx,
+       .rx =
+           {
+               .width = kDifSpiHostWidthStandard,
+               .buf = data,
+               .length = len,
+           }},
+  };
+  CHECK_DIF_OK(dif_spi_host_transaction(ctx->spi_lcd, /*csid=*/0, transaction,
+                                        ARRAYSIZE(transaction)));
+  ibex_timeout_t deadline = ibex_timeout_init(5000);
+  dif_spi_host_status_t status;
+  do {
+    CHECK_DIF_OK(dif_spi_host_get_status(ctx->spi_lcd, &status));
+    if (ibex_timeout_check(&deadline)) {
+      LOG_INFO("%s, Timeout", __func__);
+      return 0;
+    }
+  } while (status.active);
+  return data_read;
 }
 
-static void timer_delay(uint32_t ms) { busy_spin_micros(ms * 100); }
+static uint32_t gpio_write(void *handle, bool cs, bool dc) {
+  context_t *ctx = (context_t *)handle;
+  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.dc, dc));
+  CHECK_DIF_OK(dif_gpio_write(ctx->gpio, ctx->dsp_pins.cs, cs));
+  return 0;
+}
 
+static void timer_delay(void *handle, uint32_t ms) {
+  busy_spin_micros(ms * 100);
+}

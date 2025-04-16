@@ -16,9 +16,10 @@ cc_library(
         "core/lcd_base.h",
         "core/lucida_console_10pt.h",
         "core/lucida_console_12pt.h",
+        "core/m3x6_16pt.h",
         "st7735/lcd_st7735.h",
         "st7735/lcd_st7735_cmds.h",
         "st7735/lcd_st7735_init.h",
     ],
-    includes = ["."],
+    includes = [".", "./core"],
 )
