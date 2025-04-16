@@ -289,7 +289,7 @@ static bool check_secret_menu(btn_t btn) {
 }
 
 static uint32_t spi_transfer(void *handle, uint8_t *data, size_t len) {
-  context_t *ctx = (context_t *)handle;
+static uint32_t spi_write(void *handle, uint8_t *data, size_t len) {
   const uint32_t data_sent = len;
 
   dif_spi_host_segment_t transaction = {.type = kDifSpiHostSegmentTypeTx,
