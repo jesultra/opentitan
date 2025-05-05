@@ -95,7 +95,7 @@ status_t run_demo(dif_spi_host_t *spi_lcd, dif_spi_host_t *spi_flash,
 
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorGrey);
   lcd_st7735_puts(&lcd, (LCD_Point){.x = 30, .y = lcd_height - font_h},
-                  "Demo v0.1.0");
+                  "Demo v0.1.1");
   lcd_st7735_set_font_colors(&lcd, RGBColorWhite, RGBColorBlack);
 
   TRY(dif_gpio_write(gpio, led_pins.boot_ok, 0x1));
